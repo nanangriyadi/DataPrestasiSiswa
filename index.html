@@ -601,6 +601,31 @@ body[data-phase="night"] {
   --star-op: 1;
 }
 
+
+/* ══ Calendar flyout & analog clock extras ══════════════════ */
+#cal-flyout {
+  transition: background var(--theme-speed), border-color var(--theme-speed);
+}
+#cal-header {
+  background: var(--bg2);
+  transition: background var(--theme-speed);
+}
+#analog-clock {
+  border: 1px solid var(--border);
+  transition: border-color var(--theme-speed);
+}
+/* Seconds subtle pulse on lock screen */
+#lock-seconds {
+  animation: secPulse 1s steps(1) infinite;
+}
+@keyframes secPulse {
+  0%  { opacity: .55; }
+  50% { opacity: .75; }
+}
+/* Win-clock active highlight */
+#win-clock.active-clock {
+  background: var(--surface2) !important;
+}
   </style>
 </head>
 <body data-phase="night">
@@ -622,8 +647,30 @@ body[data-phase="night"] {
   <div id="stars-container"></div>
 
   <div class="lock-content">
-    <div id="lock-time" class="fu">00:00</div>
-    <div id="lock-date" class="fu fu1">Senin, 1 Januari 2025</div>
+
+    <!-- Windows-style big clock -->
+    <div style="text-align:center;position:relative;z-index:2">
+      <div style="display:flex;align-items:flex-start;justify-content:center;gap:0;line-height:1">
+        <div id="lock-time" class="fu" style="font-size:clamp(80px,14vw,128px);font-weight:200;color:#fff;letter-spacing:-5px;text-shadow:0 0 80px var(--accent-glow),0 2px 40px rgba(0,0,0,.8);font-variant-numeric:tabular-nums">00:00</div>
+        <div id="lock-seconds" style="font-size:clamp(22px,3.5vw,36px);font-weight:300;color:rgba(255,255,255,.55);margin-top:10px;margin-left:6px;letter-spacing:-1px;font-variant-numeric:tabular-nums">00</div>
+      </div>
+      <div id="lock-date" class="fu fu1" style="font-size:clamp(13px,2vw,17px);font-weight:400;color:rgba(255,255,255,.75);letter-spacing:2px;text-transform:uppercase;margin-top:6px">Senin, 1 Januari 2025</div>
+      <!-- Extra info row -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-top:8px;flex-wrap:wrap">
+        <div style="font-size:11px;color:rgba(255,255,255,.4);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:5px">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span id="lock-tz">WIB UTC+7</span>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:5px">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span id="lock-dayinfo">Hari ke-1</span>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:5px">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span id="lock-loc">Mendeteksi...</span>
+        </div>
+      </div>
+    </div>
 
     <div class="user-card fu fu2">
       <div class="user-avatar">👤</div>
@@ -645,7 +692,11 @@ body[data-phase="night"] {
   <div class="lock-taskbar">
     <div class="taskbar-icon">🔇</div>
     <div class="taskbar-icon">📶</div>
-    <div id="lock-tbar-time" class="taskbar-icon">00:00</div>
+    <!-- Windows-style lock taskbar clock -->
+    <div style="display:flex;flex-direction:column;align-items:flex-end;cursor:default;gap:1px">
+      <div id="lock-tbar-time" style="font-size:12px;font-weight:600;color:rgba(255,255,255,.85);font-family:'JetBrains Mono',monospace;letter-spacing:.5px">00:00</div>
+      <div id="lock-tbar-date" style="font-size:10px;color:rgba(255,255,255,.5);font-family:'JetBrains Mono',monospace">1/1/2025</div>
+    </div>
   </div>
 </div>
 
@@ -695,9 +746,39 @@ body[data-phase="night"] {
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
       </div>
-      <div class="taskbar-right">
-        <div id="app-time"></div>
+      <!-- Windows 11 system clock - click opens calendar flyout -->
+      <div id="win-clock" onclick="toggleCalFlyout(event)" style="display:flex;flex-direction:column;align-items:flex-end;cursor:pointer;padding:4px 10px;border-radius:6px;transition:background .15s;gap:1px;user-select:none;min-width:68px" onmouseover="this.style.background='var(--surface2)'" onmouseout="if(!calOpen)this.style.background='transparent'">
+        <div id="app-time" style="font-size:12px;font-weight:600;color:var(--text);font-family:'JetBrains Mono',monospace;letter-spacing:.4px;line-height:1.3;white-space:nowrap">00:00:00</div>
+        <div id="app-date-short" style="font-size:10px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;line-height:1.3;white-space:nowrap">1/1/2025</div>
       </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR FLYOUT Windows 11 style -->
+  <div id="cal-flyout" style="display:none;position:fixed;bottom:56px;right:8px;z-index:500;width:320px;border-radius:14px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.55)">
+    <div id="cal-header" style="padding:18px 18px 14px;display:flex;align-items:center;gap:14px">
+      <canvas id="analog-clock" width="76" height="76" style="border-radius:50%;flex-shrink:0"></canvas>
+      <div style="flex:1;min-width:0">
+        <div id="fly-time" style="font-size:30px;font-weight:200;letter-spacing:-1.5px;color:var(--text);font-variant-numeric:tabular-nums;line-height:1">00:00</div>
+        <div id="fly-seconds" style="font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-top:2px">:00</div>
+        <div id="fly-date-full" style="font-size:11px;color:var(--text-dim);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Senin, 1 Januari 2025</div>
+      </div>
+    </div>
+    <div style="height:1px;background:var(--border);margin:0 14px"></div>
+    <div style="padding:14px 18px 10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <button onclick="calPrev()" style="width:26px;height:26px;border-radius:5px;border:none;background:var(--surface);color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s" onmouseover="this.style.background='var(--accent-dim)'" onmouseout="this.style.background='var(--surface)'">&#8249;</button>
+        <span id="fly-cal-title" style="font-size:12px;font-weight:600;color:var(--text)">Maret 2026</span>
+        <button onclick="calNext()" style="width:26px;height:26px;border-radius:5px;border:none;background:var(--surface);color:var(--text);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s" onmouseover="this.style.background='var(--accent-dim)'" onmouseout="this.style.background='var(--surface)'">&#8250;</button>
+      </div>
+      <div id="fly-cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center"></div>
+    </div>
+    <div style="height:1px;background:var(--border);margin:0 14px"></div>
+    <div style="padding:8px 18px 14px;display:flex;flex-wrap:wrap;gap:6px 14px">
+      <div style="display:flex;align-items:center;gap:4px"><svg width="10" height="10" fill="none" stroke="var(--muted)" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span id="fly-tz" style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">UTC+7</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><svg width="10" height="10" fill="none" stroke="var(--muted)" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span id="fly-dayofyear" style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">Hari ke-1</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><svg width="10" height="10" fill="none" stroke="var(--muted)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span id="fly-loc" style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">...</span></div>
+      <div style="display:flex;align-items:center;gap:4px"><svg width="10" height="10" fill="none" stroke="var(--muted)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zM2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg><span id="fly-week" style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">Minggu ke-1</span></div>
     </div>
   </div>
 
@@ -1096,31 +1177,289 @@ function applyTheme(phase) {
 // ══════════════════════════════════════════════════════════════
 // CLOCK + THEME TICK
 // ══════════════════════════════════════════════════════════════
+// ── Constants ───────────────────────────────────────────────
+const DAYS_ID   = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+const DAYS_FULL = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const MONTHS_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+// Calendar flyout state
+let calOpen = false;
+let calView = null; // {y, m}
+
+// ── Timezone & location info (detected once) ─────────────────
+let tzLabel = '';
+let locLabel = 'Mendeteksi...';
+(function detectInfo() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const off = -new Date().getTimezoneOffset();
+    const sign = off >= 0 ? '+' : '-';
+    const hh = String(Math.floor(Math.abs(off)/60)).padStart(2,'0');
+    const mm = String(Math.abs(off)%60).padStart(2,'0');
+    tzLabel = `${tz} (UTC${sign}${hh}:${mm})`;
+    // Shorten for lock screen
+    const tzShort = tz.split('/').pop().replace('_',' ') + ` UTC${sign}${hh}`;
+    const el = document.getElementById('lock-tz');
+    if (el) el.textContent = tzShort;
+    const ft = document.getElementById('fly-tz');
+    if (ft) ft.textContent = tzLabel;
+  } catch(e) {}
+  // Try geolocation
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      // Reverse geocode using a simple approach
+      locLabel = `${pos.coords.latitude.toFixed(2)}°, ${pos.coords.longitude.toFixed(2)}°`;
+      const ll = document.getElementById('lock-loc');
+      const fl = document.getElementById('fly-loc');
+      if (ll) ll.textContent = locLabel;
+      if (fl) fl.textContent = locLabel;
+    }, () => {
+      locLabel = 'Lokasi tidak tersedia';
+      const ll = document.getElementById('lock-loc');
+      const fl = document.getElementById('fly-loc');
+      if (ll) ll.textContent = locLabel;
+      if (fl) fl.textContent = locLabel;
+    }, { timeout: 5000 });
+  } else {
+    locLabel = tz || 'Tidak tersedia';
+  }
+})();
+
+// ── Day of year & week ───────────────────────────────────────
+function getDayOfYear(d) {
+  return Math.floor((d - new Date(d.getFullYear(),0,0)) / 86400000);
+}
+function getWeekNum(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+}
+function isLeap(y) { return (y%4===0&&y%100!==0)||(y%400===0); }
+
+// ── Main clock tick ──────────────────────────────────────────
 function updateClock() {
   const now = new Date();
-  const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
-  const hp = h.toString().padStart(2,'0');
-  const mp = m.toString().padStart(2,'0');
-  const sp = s.toString().padStart(2,'0');
+  const h = now.getHours(), mi = now.getMinutes(), s = now.getSeconds();
+  const hp = String(h).padStart(2,'0');
+  const mp = String(mi).padStart(2,'0');
+  const sp = String(s).padStart(2,'0');
 
-  const lt  = document.getElementById('lock-time');
-  const ltt = document.getElementById('lock-tbar-time');
-  const at  = document.getElementById('app-time');
-  if (lt)  lt.textContent  = `${hp}:${mp}`;
-  if (ltt) ltt.textContent = `${hp}:${mp}`;
-  if (at)  at.textContent  = `${hp}:${mp}:${sp}`;
+  // Lock screen clock
+  const lt = document.getElementById('lock-time');
+  const lsec = document.getElementById('lock-seconds');
+  if (lt) lt.textContent = `${hp}:${mp}`;
+  if (lsec) lsec.textContent = sp;
 
-  const days   = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-  const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  // Lock screen date
   const ld = document.getElementById('lock-date');
-  if (ld) ld.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  if (ld) ld.textContent = `${DAYS_FULL[now.getDay()]}, ${now.getDate()} ${MONTHS_ID[now.getMonth()]} ${now.getFullYear()}`;
 
-  // Apply theme only when minute changes (avoids constant redraws)
-  if (m !== lastMinute) {
-    lastMinute = m;
+  // Lock screen taskbar
+  const ltt = document.getElementById('lock-tbar-time');
+  const ltd = document.getElementById('lock-tbar-date');
+  if (ltt) ltt.textContent = `${hp}:${mp}`;
+  if (ltd) ltd.textContent = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
+
+  // Lock screen extra
+  const doy = getDayOfYear(now);
+  const totalDays = isLeap(now.getFullYear()) ? 366 : 365;
+  const ldi = document.getElementById('lock-dayinfo');
+  if (ldi) ldi.textContent = `Hari ke-${doy} / ${totalDays}`;
+
+  // App taskbar clock
+  const at = document.getElementById('app-time');
+  const ads = document.getElementById('app-date-short');
+  if (at) at.textContent = `${hp}:${mp}:${sp}`;
+  if (ads) ads.textContent = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
+
+  // Calendar flyout live updates
+  if (calOpen) {
+    const ft = document.getElementById('fly-time');
+    const fs = document.getElementById('fly-seconds');
+    const fdf = document.getElementById('fly-date-full');
+    const fdoy = document.getElementById('fly-dayofyear');
+    const fwk  = document.getElementById('fly-week');
+    if (ft) ft.textContent = `${hp}:${mp}`;
+    if (fs) fs.textContent = `:${sp}`;
+    if (fdf) fdf.textContent = `${DAYS_FULL[now.getDay()]}, ${now.getDate()} ${MONTHS_ID[now.getMonth()]} ${now.getFullYear()}`;
+    if (fdoy) fdoy.textContent = `Hari ke-${doy} / ${totalDays}`;
+    if (fwk) fwk.textContent = `Minggu ke-${getWeekNum(now)}`;
+    drawAnalogClock(now);
+  }
+
+  // Apply theme only on minute change
+  if (mi !== lastMinute) {
+    lastMinute = mi;
     applyTheme(getPhase(h));
   }
 }
+
+// ── Analog Clock (Canvas) ────────────────────────────────────
+function drawAnalogClock(now) {
+  const canvas = document.getElementById('analog-clock');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, r = W/2 - 3;
+
+  const cs = getComputedStyle(document.documentElement);
+  const accent  = cs.getPropertyValue('--accent').trim()   || '#3d72ff';
+  const surface = cs.getPropertyValue('--surface2').trim() || 'rgba(255,255,255,0.07)';
+  const text    = cs.getPropertyValue('--text').trim()     || '#e8edf5';
+  const muted   = cs.getPropertyValue('--muted').trim()    || '#64748b';
+  const border  = cs.getPropertyValue('--border').trim()   || 'rgba(255,255,255,0.08)';
+
+  ctx.clearRect(0,0,W,H);
+
+  // Face background
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,2*Math.PI);
+  ctx.fillStyle = surface; ctx.fill();
+  ctx.strokeStyle = border; ctx.lineWidth = 1; ctx.stroke();
+
+  // Hour markers
+  for (let i=0;i<12;i++) {
+    const angle = (i/12)*2*Math.PI - Math.PI/2;
+    const isMajor = i%3===0;
+    const r1 = r*(isMajor?0.78:0.84);
+    const r2 = r*0.92;
+    ctx.beginPath();
+    ctx.moveTo(cx+r1*Math.cos(angle), cy+r1*Math.sin(angle));
+    ctx.lineTo(cx+r2*Math.cos(angle), cy+r2*Math.sin(angle));
+    ctx.strokeStyle = isMajor ? text : muted;
+    ctx.lineWidth = isMajor ? 2 : 1;
+    ctx.stroke();
+  }
+
+  const sec = now.getSeconds(), min = now.getMinutes(), hr = now.getHours()%12;
+  const secAngle = (sec/60)*2*Math.PI - Math.PI/2;
+  const minAngle = ((min + sec/60)/60)*2*Math.PI - Math.PI/2;
+  const hrAngle  = ((hr + min/60)/12)*2*Math.PI - Math.PI/2;
+
+  // Hour hand
+  ctx.beginPath(); ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+r*0.5*Math.cos(hrAngle), cy+r*0.5*Math.sin(hrAngle));
+  ctx.strokeStyle = text; ctx.lineWidth = 3; ctx.lineCap='round'; ctx.stroke();
+
+  // Minute hand
+  ctx.beginPath(); ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+r*0.7*Math.cos(minAngle), cy+r*0.7*Math.sin(minAngle));
+  ctx.strokeStyle = text; ctx.lineWidth = 2; ctx.lineCap='round'; ctx.stroke();
+
+  // Second hand
+  ctx.beginPath(); ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+r*0.82*Math.cos(secAngle), cy+r*0.82*Math.sin(secAngle));
+  ctx.strokeStyle = accent; ctx.lineWidth = 1.2; ctx.lineCap='round'; ctx.stroke();
+
+  // Center dot
+  ctx.beginPath(); ctx.arc(cx,cy,3,0,2*Math.PI);
+  ctx.fillStyle = accent; ctx.fill();
+}
+
+// ── Calendar Flyout ──────────────────────────────────────────
+function toggleCalFlyout(e) {
+  if (e) e.stopPropagation();
+  calOpen = !calOpen;
+  const fly = document.getElementById('cal-flyout');
+  const wc = document.getElementById('win-clock');
+  if (!fly) return;
+  if (calOpen) {
+    const now = new Date();
+    if (!calView) calView = {y: now.getFullYear(), m: now.getMonth()};
+    // Set flyout background
+    fly.style.display = 'block';
+    fly.style.background = 'var(--bg2)';
+    fly.style.border = '1px solid var(--border)';
+    updateFlyoutCal();
+    drawAnalogClock(now);
+    if (wc) wc.style.background = 'var(--surface2)';
+  } else {
+    fly.style.display = 'none';
+    if (wc) wc.style.background = 'transparent';
+  }
+}
+
+function updateFlyoutCal() {
+  const now = new Date();
+  const {y,m} = calView;
+  const title = document.getElementById('fly-cal-title');
+  if (title) title.textContent = `${MONTHS_ID[m]} ${y}`;
+
+  const grid = document.getElementById('fly-cal-grid');
+  if (!grid) return;
+
+  // Day name headers
+  let html = DAYS_ID.map(d =>
+    `<div style="font-size:9px;font-weight:600;color:var(--muted);padding:3px 0;text-transform:uppercase;letter-spacing:.05em">${d}</div>`
+  ).join('');
+
+  // Empty cells before 1st
+  const firstDay = new Date(y,m,1).getDay();
+  for (let i=0;i<firstDay;i++) html += '<div></div>';
+
+  // Days
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  for (let d=1;d<=daysInMonth;d++) {
+    const isToday = d===now.getDate() && m===now.getMonth() && y===now.getFullYear();
+    const isWeekend = new Date(y,m,d).getDay()===0 || new Date(y,m,d).getDay()===6;
+    let style = `font-size:11px;padding:4px 2px;border-radius:50%;cursor:default;transition:background .12s;`;
+    if (isToday) {
+      style += `background:var(--accent);color:#fff;font-weight:700;`;
+    } else if (isWeekend) {
+      style += `color:var(--accent2);`;
+    } else {
+      style += `color:var(--text);`;
+    }
+    html += `<div style="${style}">${d}</div>`;
+  }
+  grid.innerHTML = html;
+
+  // Update footer info
+  const doy = getDayOfYear(now);
+  const totalDays = isLeap(now.getFullYear()) ? 366 : 365;
+  const fdoy = document.getElementById('fly-dayofyear');
+  const fwk  = document.getElementById('fly-week');
+  const ftz  = document.getElementById('fly-tz');
+  const floc = document.getElementById('fly-loc');
+  if (fdoy) fdoy.textContent = `Hari ke-${doy} / ${totalDays}`;
+  if (fwk) fwk.textContent = `Minggu ke-${getWeekNum(now)}`;
+  if (ftz && tzLabel) ftz.textContent = tzLabel;
+  if (floc && locLabel) floc.textContent = locLabel;
+
+  // Full date
+  const fdf = document.getElementById('fly-date-full');
+  if (fdf) fdf.textContent = `${DAYS_FULL[now.getDay()]}, ${now.getDate()} ${MONTHS_ID[now.getMonth()]} ${now.getFullYear()}`;
+
+  // Time
+  const ft = document.getElementById('fly-time');
+  const fs = document.getElementById('fly-seconds');
+  if (ft) ft.textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  if (fs) fs.textContent = ':' + String(now.getSeconds()).padStart(2,'0');
+}
+
+function calPrev() {
+  if (!calView) return;
+  calView.m--;
+  if (calView.m < 0) { calView.m = 11; calView.y--; }
+  updateFlyoutCal();
+}
+function calNext() {
+  if (!calView) return;
+  calView.m++;
+  if (calView.m > 11) { calView.m = 0; calView.y++; }
+  updateFlyoutCal();
+}
+
+// Close flyout when clicking outside
+document.addEventListener('click', e => {
+  const fly = document.getElementById('cal-flyout');
+  const wc  = document.getElementById('win-clock');
+  if (calOpen && fly && !fly.contains(e.target) && wc && !wc.contains(e.target)) {
+    calOpen = false;
+    fly.style.display = 'none';
+    if (wc) wc.style.background = 'transparent';
+  }
+});
 
 // ══════════════════════════════════════════════════════════════
 // STARS
