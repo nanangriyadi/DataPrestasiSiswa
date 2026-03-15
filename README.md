@@ -62,8 +62,11 @@ Vercel akan secara otomatis mendeteksi file index.html dan melakukan deployment.
 Bash
 .
 ├── index.html    # Tampilan utama & Logika Frontend
+
 ├── kode.gs       # Logic API untuk Google Apps Script
+
 └── README.md     # Dokumentasi proyek
+
 📝 Catatan Engineer
 Pastikan setiap kali Anda melakukan perubahan pada kode.gs, Anda melakukan New Deployment atau melakukan Manage Deployment ke versi terbaru agar perubahan API tersinkronisasi dengan Frontend.
 
