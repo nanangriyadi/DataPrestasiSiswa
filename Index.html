@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Prestasi Siswa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#080c14; --surface:rgba(255,255,255,0.03); --border:rgba(255,255,255,0.07);
+      --blue:#3d72ff; --text:#e2e8f0;
+    }
+    body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); }
+    .glass { background: var(--surface); border: 1px solid var(--border); backdrop-filter: blur(12px); }
+    .trow:hover { background: rgba(61,114,255,0.08); cursor: pointer; }
+    /* Efek Hover Table */
+    .name-text:hover { color: #93b4ff; text-decoration: underline; }
+  </style>
+</head>
+<body class="p-4 sm:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h1 class="text-2xl font-extrabold text-white">🏆 Dashboard Prestasi</h1>
+        <p class="text-gray-500 text-sm">Data real-time dari Google Sheets</p>
+      </div>
+      <button onclick="openAdd()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20">
+        + Tambah Data
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="glass p-5 rounded-2xl border-l-4 border-blue-500">
+        <p class="text-xs font-bold text-gray-500 uppercase">Total Siswa</p>
+        <p id="st-tot" class="text-3xl font-black mt-1">—</p>
+      </div>
+      <div class="glass p-5 rounded-2xl border-l-4 border-yellow-500">
+        <p class="text-xs font-bold text-gray-500 uppercase">Juara 1</p>
+        <p id="st-j1" class="text-3xl font-black mt-1 text-yellow-500">—</p>
+      </div>
+      <div class="glass p-5 rounded-2xl border-l-4 border-gray-400">
+        <p class="text-xs font-bold text-gray-500 uppercase">Juara 2</p>
+        <p id="st-j2" class="text-3xl font-black mt-1 text-gray-400">—</p>
+      </div>
+      <div class="glass p-5 rounded-2xl border-l-4 border-orange-600">
+        <p class="text-xs font-bold text-gray-500 uppercase">Juara 3</p>
+        <p id="st-j3" class="text-3xl font-black mt-1 text-orange-600">—</p>
+      </div>
+    </div>
+
+    <div class="glass p-6 rounded-2xl">
+      <h3 class="text-sm font-bold mb-4 flex items-center gap-2">
+        <span class="w-1 h-4 bg-blue-500 rounded"></span> Tren Prestasi Per Tahun
+      </h3>
+      <div class="h-[250px]">
+        <canvas id="chart-j"></canvas>
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl overflow-hidden">
+      <div class="p-4 border-b border-white/5 flex flex-wrap gap-3 justify-between items-center">
+        <h3 class="font-bold">Data Prestasi</h3>
+        <input id="srch" type="text" placeholder="Cari nama..." onkeyup="filterTbl()" class="bg-white/5 border border-white/10 rounded-lg px-4 py-1.5 text-sm outline-none focus:border-blue-500 transition-all" />
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-white/5 text-gray-400 uppercase text-[10px] tracking-widest">
+            <tr>
+              <th class="p-4">Nama Siswa</th>
+              <th class="p-4">Cabang</th>
+              <th class="p-4 text-center">Tahun</th>
+              <th class="p-4">Juara</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body" class="divide-y divide-white/5">
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
+    const API_URL = "https://script.google.com/macros/s/AKfycbxy5OeB_D06M2fD2g3L2EBe08cyISRrBA2pH5dRJG3Xm9oL2OpUd9divnmdiB35zg-m/exec"; 
+    let allData = [];
+
+    async function loadData() {
+      try {
+        const res = await fetch(API_URL);
+        allData = await res.json();
+        renderDashboard(allData);
+      } catch (e) { console.error("Error load data:", e); }
+    }
+
+    function renderDashboard(data) {
+      // Stats
+      document.getElementById('st-tot').innerText = data.length;
+      document.getElementById('st-j1').innerText = data.filter(d => d.juara_lomba === 'Juara 1').length;
+      document.getElementById('st-j2').innerText = data.filter(d => d.juara_lomba === 'Juara 2').length;
+      document.getElementById('st-j3').innerText = data.filter(d => d.juara_lomba === 'Juara 3').length;
+
+      // Table
+      const body = document.getElementById('tbl-body');
+      body.innerHTML = data.map(item => `
+        <tr class="trow" onclick='showPopup(${JSON.stringify(item)})'>
+          <td class="p-4 font-semibold name-text">${item.nama_siswa}</td>
+          <td class="p-4 text-gray-400">${item.cabang_lomba}</td>
+          <td class="p-4 text-center">${item.tahun || '-'}</td>
+          <td class="p-4">
+            <span class="px-3 py-1 rounded-full text-[10px] font-bold ${item.juara_lomba.includes('1') ? 'bg-yellow-500/20 text-yellow-500' : 'bg-blue-500/20 text-blue-400'}">
+              ${item.juara_lomba}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+
+      renderChart(data);
+    }
+
+    function showPopup(item) {
+      // Gunakan alert bawaan browser atau ganti dengan library Modal pilihan Anda
+      alert(`DETAIL SISWA\n\nNama: ${item.nama_siswa}\nNISN: ${item.nisn}\nCabang: ${item.cabang_lomba}\nBidang: ${item.bidang_lomba}\nJuara: ${item.juara_lomba}\nTahun: ${item.tahun}`);
+    }
+
+    function renderChart(data) {
+      const ctx = document.getElementById('chart-j').getContext('2d');
+      const years = [...new Set(data.map(d => d.tahun))].sort();
+      const counts = years.map(y => data.filter(d => d.tahun == y).length);
+
+      if(window.myChart) window.myChart.destroy();
+      window.myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: years,
+          datasets: [{
+            label: 'Total Juara',
+            data: counts,
+            borderColor: '#3d72ff',
+            backgroundColor: 'rgba(61,114,255,0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
