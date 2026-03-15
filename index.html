@@ -1,154 +1,1476 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Dashboard Prestasi Siswa</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-    :root {
-      --bg:#080c14; --surface:rgba(255,255,255,0.03); --border:rgba(255,255,255,0.07);
-      --blue:#3d72ff; --text:#e2e8f0;
-    }
-    body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); }
-    .glass { background: var(--surface); border: 1px solid var(--border); backdrop-filter: blur(12px); }
-    .trow:hover { background: rgba(61,114,255,0.08); cursor: pointer; }
-    /* Efek Hover Table */
-    .name-text:hover { color: #93b4ff; text-decoration: underline; }
+
+/* ══════════════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES — TIME-BASED THEME ENGINE
+   Semua warna dikontrol dari JS via setProperty()
+   6 Fase: subuh(04-06) pagi(06-10) siang(10-15) sore(15-17) senja(17-19) malam(19-04)
+══════════════════════════════════════════════════════════ */
+:root {
+  /* Theme colors — diubah JS setiap menit */
+  --bg:           #060a12;
+  --bg2:          #0a0f1e;
+  --surface:      rgba(255,255,255,0.04);
+  --surface2:     rgba(255,255,255,0.07);
+  --border:       rgba(255,255,255,0.08);
+  --border-h:     rgba(99,149,255,0.45);
+  --text:         #e8edf5;
+  --text-dim:     #94a3b8;
+  --muted:        #64748b;
+  --accent:       #3d72ff;
+  --accent2:      #6090ff;
+  --accent-glow:  rgba(61,114,255,0.28);
+  --accent-dim:   rgba(61,114,255,0.12);
+  --gold:         #f0c040;
+  --silver:       #b0bec5;
+  --bronze:       #cd7f32;
+
+  /* Lock screen wallpaper colors */
+  --wall-a:       #070d1e;
+  --wall-b:       #0d0820;
+  --wall-c:       #060e1e;
+  --aurora-1:     rgba(61,114,255,0.22);
+  --aurora-2:     rgba(120,60,220,0.14);
+  --aurora-3:     rgba(0,180,200,0.09);
+
+  /* App background mesh */
+  --mesh-1:       rgba(61,114,255,0.12);
+  --mesh-2:       rgba(240,192,64,0.06);
+  --mesh-3:       rgba(61,114,255,0.06);
+
+  /* Taskbar */
+  --taskbar-bg:   rgba(6,10,18,0.92);
+  --taskbar-bd:   rgba(255,255,255,0.06);
+
+  /* Transition speed for theme change */
+  --theme-speed:  2s;
+
+  /* Star visibility (0 = hidden in day, 1 = visible at night) */
+  --star-op:      1;
+}
+
+/* ══════════════════════════════════════════════════════════
+   THEME TRANSITION — smooth color morphing
+══════════════════════════════════════════════════════════ */
+body,
+#lockscreen,
+#lockscreen::before,
+#lockscreen::after,
+#app,
+#app::before,
+.taskbar,
+.glass,
+.stat-card,
+.det-box,
+.det-hdr,
+#cfg-bar,
+#mob-menu,
+.lock-taskbar {
+  transition:
+    background var(--theme-speed) ease,
+    background-color var(--theme-speed) ease,
+    border-color var(--theme-speed) ease,
+    color var(--theme-speed) ease,
+    box-shadow var(--theme-speed) ease;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TIME BADGE — pojok kanan lock screen
+══════════════════════════════════════════════════════════ */
+#time-phase-badge {
+  position: absolute;
+  top: 20px; right: 20px;
+  z-index: 10;
+  padding: 6px 14px;
+  border-radius: 99px;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.3);
+  color: rgba(255,255,255,0.8);
+  display: flex; align-items: center; gap: 6px;
+  transition: all 1.5s ease;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SUN / MOON INDICATOR
+══════════════════════════════════════════════════════════ */
+#sky-indicator {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  z-index: 10;
+  transition: background var(--theme-speed) ease;
+}
+
+/* ══════════════════════════════════════════════════════════
+   BASE RESET
+══════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  user-select: none;
+}
+input, select { outline: none; color: var(--text); }
+input:focus, select:focus { box-shadow: 0 0 0 2px var(--accent-dim) !important; }
+
+/* ══════════════════════════════════════════════════════════
+   LOCK SCREEN
+══════════════════════════════════════════════════════════ */
+#lockscreen {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  overflow: hidden;
+  transition: transform .8s cubic-bezier(.4,0,.2,1), opacity .8s ease;
+}
+
+#lockscreen::before {
+  content: '';
+  position: absolute; inset: -24px;
+  background:
+    radial-gradient(ellipse 120% 80% at 30% 20%, var(--wall-a) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 100% at 80% 60%, var(--wall-b) 0%, transparent 55%),
+    linear-gradient(135deg, var(--wall-c) 0%, var(--wall-a) 50%, var(--wall-c) 100%);
+  animation: wallShift 14s ease-in-out infinite;
+  z-index: 0;
+  transition: background var(--theme-speed) ease;
+}
+
+#lockscreen::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 40% at 20% 10%, var(--aurora-1) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 80% 80%, var(--aurora-2) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 50% at 60% 30%, var(--aurora-3) 0%, transparent 60%);
+  animation: auroraAnim 9s ease-in-out infinite alternate;
+  z-index: 0;
+  transition: background var(--theme-speed) ease;
+}
+
+@keyframes wallShift {
+  0%,100%{transform:scale(1.03) translate(0,0)}
+  25%{transform:scale(1.05) translate(-10px,5px)}
+  50%{transform:scale(1.04) translate(5px,-8px)}
+  75%{transform:scale(1.06) translate(-5px,4px)}
+}
+@keyframes auroraAnim {
+  0%{opacity:.55;transform:scale(1)}
+  100%{opacity:1;transform:scale(1.08) translate(24px,-18px)}
+}
+
+/* Stars (fade based on time) */
+#stars-container { position:absolute;inset:0;z-index:1;pointer-events:none; }
+.star {
+  position: absolute; border-radius: 50%; background: #fff;
+  animation: twinkle var(--dur,3s) ease-in-out infinite var(--del,0s);
+  z-index: 1;
+  opacity: var(--star-op, 1);
+  transition: opacity 3s ease;
+}
+@keyframes twinkle {
+  0%,100%{opacity:calc(var(--star-op)*0.2);transform:scale(1)}
+  50%{opacity:calc(var(--star-op)*1);transform:scale(1.35)}
+}
+
+/* Lock content */
+.lock-content {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+
+#lock-time {
+  font-size: clamp(64px,12vw,110px);
+  font-weight: 300; color: var(--text); letter-spacing: -3px; line-height: 1;
+  text-shadow: 0 0 80px var(--accent-glow), 0 2px 40px rgba(0,0,0,.8);
+  transition: color var(--theme-speed), text-shadow var(--theme-speed);
+}
+
+#lock-date {
+  font-size: clamp(13px,2.2vw,18px);
+  font-weight: 400; color: var(--text-dim);
+  letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 16px;
+  transition: color var(--theme-speed);
+}
+
+/* User card */
+.user-card {
+  background: var(--surface2);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 24px; padding: 28px 44px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; margin-top: 24px; min-width: 290px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
+  transition: background var(--theme-speed), border-color var(--theme-speed), box-shadow var(--theme-speed);
+}
+.user-card::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, var(--accent-dim), rgba(120,60,220,.04));
+  border-radius: inherit;
+  transition: background var(--theme-speed);
+}
+
+/* Shine sweep */
+.user-card::after {
+  content: ''; position: absolute;
+  top: -50%; left: -60%; width: 40%; height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent);
+  transform: skewX(-20deg); pointer-events: none;
+  transition: left .8s ease;
+}
+.user-card:hover::after { left: 140%; }
+
+.user-avatar {
+  width: 76px; height: 76px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; font-weight: 700; color: #fff;
+  box-shadow: 0 8px 36px var(--accent-glow);
+  border: 3px solid rgba(255,255,255,.22); position: relative; z-index: 1;
+  transition: background var(--theme-speed), box-shadow var(--theme-speed);
+}
+
+.user-name  { font-size: 18px; font-weight: 600; color: var(--text); z-index: 1; transition: color var(--theme-speed); }
+.user-role  { font-size: 11px; color: var(--muted); z-index: 1; margin-top: -8px; transition: color var(--theme-speed); }
+
+/* Greeting under role */
+#lock-greeting {
+  font-size: 13px; color: var(--accent2); z-index: 1; font-weight: 500;
+  margin-top: -4px;
+  transition: color var(--theme-speed);
+}
+
+.btn-open {
+  position: relative; z-index: 1; margin-top: 6px;
+  padding: 13px 38px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-glow));
+  border: 1px solid rgba(99,149,255,.4); border-radius: 50px;
+  color: #fff; font-size: 14px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; gap: 10px;
+  white-space: nowrap;
+  box-shadow: 0 8px 32px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.2);
+  transition: all .25s ease;
+}
+.btn-open:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 48px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.btn-open:active { transform: scale(.97); }
+.btn-open .arrow-icon {
+  width: 22px; height: 22px; background: rgba(255,255,255,.22);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  transition: transform .25s;
+}
+.btn-open:hover .arrow-icon { transform: translateX(4px); }
+
+.hint-text {
+  position: absolute; bottom: 58px; font-size: 11px;
+  color: rgba(255,255,255,.35); letter-spacing: 1.5px;
+  animation: hintPulse 2.6s ease-in-out infinite; z-index: 2;
+}
+@keyframes hintPulse { 0%,100%{opacity:.35} 50%{opacity:.8} }
+
+.lock-taskbar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 44px;
+  background: rgba(0,0,0,.32); backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,.06);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 20px; gap: 16px; z-index: 2;
+}
+.taskbar-icon { font-size: 13px; color: rgba(255,255,255,.5); display: flex; align-items: center; gap: 4px; }
+
+/* ══════════════════════════════════════════════════════════
+   TRANSITION OVERLAY
+══════════════════════════════════════════════════════════ */
+#transition-overlay {
+  position: fixed; inset: 0; z-index: 90;
+  background: #000; opacity: 0; pointer-events: none;
+  transition: opacity .4s ease;
+}
+#transition-overlay.show { opacity: 1; pointer-events: all; }
+
+/* ══════════════════════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════════════════════ */
+#app {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  opacity: 0; transform: scale(.985);
+  transition: opacity .6s ease, transform .6s ease, background var(--theme-speed);
+  overflow: hidden;
+}
+#app.show { opacity: 1; transform: scale(1); }
+#app::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%, var(--mesh-1) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 15%, var(--mesh-2) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 60% at 50% 100%, var(--mesh-3) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+  transition: background var(--theme-speed);
+}
+#app > * { position: relative; z-index: 1; }
+
+/* Taskbar */
+.taskbar {
+  height: 48px; flex-shrink: 0;
+  background: var(--taskbar-bg);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--taskbar-bd);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+}
+.taskbar-logo { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--text); font-size: 13px; }
+.logo-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), #2550e0);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px var(--accent-glow); font-size: 13px;
+  transition: background var(--theme-speed), box-shadow var(--theme-speed);
+}
+.taskbar-right { display: flex; align-items: center; gap: 12px; font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono',monospace; }
+
+/* Theme indicator in taskbar */
+#app-phase-badge {
+  font-size: 10px; padding: 3px 10px; border-radius: 99px;
+  background: var(--accent-dim); color: var(--accent2);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-weight: 600; letter-spacing: 0.06em;
+  transition: all var(--theme-speed);
+}
+
+.start-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 11px; cursor: pointer;
+  transition: all .2s;
+}
+.start-btn:hover { background: var(--accent-dim); border-color: rgba(99,149,255,.3); color: var(--text); }
+
+.act-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 11px; cursor: pointer;
+  transition: all .2s; white-space: nowrap;
+}
+.act-btn:hover { background: var(--accent-dim); border-color: rgba(99,149,255,.3); color: var(--text); transform: translateY(-1px); }
+.act-btn:active { transform: scale(.97); }
+.act-btn.primary {
+  background: linear-gradient(135deg, rgba(61,114,255,.85), rgba(50,80,200,.85));
+  border-color: rgba(99,149,255,.4); color: #fff;
+  box-shadow: 0 4px 16px var(--accent-glow);
+  transition: all .2s, background var(--theme-speed), box-shadow var(--theme-speed);
+}
+.act-btn.primary:hover { box-shadow: 0 6px 24px var(--accent-glow); }
+
+/* Scrollable content */
+.app-content {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 20px 20px 24px;
+  display: flex; flex-direction: column; gap: 20px;
+  scrollbar-width: thin; scrollbar-color: var(--accent-dim) transparent;
+}
+.app-content::-webkit-scrollbar { width: 5px; }
+.app-content::-webkit-scrollbar-track { background: transparent; }
+.app-content::-webkit-scrollbar-thumb { background: var(--accent-dim); border-radius: 99px; }
+
+/* Glass cards */
+.glass {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+}
+
+/* Stat cards */
+.stat-card { transition: transform .2s, border-color .25s, box-shadow .25s, background var(--theme-speed); cursor: default; }
+.stat-card:hover { transform: translateY(-3px); }
+.sc-blue { border-left: 3px solid var(--accent); }
+.sc-blue:hover { border-color: var(--accent) !important; box-shadow: 0 0 40px var(--accent-dim); }
+.sc-g:hover { border-color: rgba(240,192,64,.5)!important; box-shadow: 0 0 40px rgba(240,192,64,.1); }
+.sc-s:hover { border-color: rgba(176,190,197,.5)!important; box-shadow: 0 0 40px rgba(176,190,197,.08); }
+.sc-r:hover { border-color: rgba(205,127,50,.5)!important; box-shadow: 0 0 40px rgba(205,127,50,.08); }
+
+/* Table */
+.trow { border-bottom: 1px solid var(--border); transition: background .16s; }
+.trow:hover { background: var(--accent-dim); cursor: pointer; }
+.trow:hover .nm { color: var(--accent2); text-decoration: underline; text-underline-offset: 3px; }
+.nm { font-weight: 600; color: var(--text); transition: color .15s; }
+.av { width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;transition:transform .18s,box-shadow .18s; }
+.trow:hover .av { transform: scale(1.12); box-shadow: 0 4px 12px var(--accent-glow); }
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.b1{background:linear-gradient(135deg,#f0c040,#e09010);color:#0d0a00}
+.b2{background:rgba(176,190,197,.15);color:#b0bec5;border:1px solid rgba(176,190,197,.3)}
+.b3{background:rgba(205,127,50,.15);color:#cd7f32;border:1px solid rgba(205,127,50,.3)}
+.bh{background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3)}
+.bp{background:rgba(255,255,255,.05);color:#64748b;border:1px solid rgba(255,255,255,.1)}
+
+/* Skeleton */
+@keyframes shimmer{0%{background-position:-500px 0}100%{background-position:500px 0}}
+.skel{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:500px 100%;animation:shimmer 1.5s infinite;border-radius:5px}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.92) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes notifIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes notifOut{from{opacity:1}to{opacity:0;transform:translateX(20px)}}
+.fu{animation:fadeUp .4s ease both}
+.fu1{animation-delay:.06s}.fu2{animation-delay:.12s}.fu3{animation-delay:.18s}.fu4{animation-delay:.24s}
+.si{animation:scaleIn .35s cubic-bezier(.34,1.56,.64,1) both}
+.ne{animation:notifIn .3s ease}
+
+@keyframes dB{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text);animation:dB 1.4s infinite ease-in-out both}
+.dot:nth-child(1){animation-delay:-.32s}.dot:nth-child(2){animation-delay:-.16s}.dot:nth-child(3){animation-delay:0s}
+
+/* Detail popup */
+.det-ov{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem}
+.det-box{background:var(--bg2);border:1px solid var(--border-h);border-radius:20px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.7)}
+.det-hdr{background:linear-gradient(135deg,var(--accent-dim),rgba(120,60,220,.08));border-bottom:1px solid var(--border);border-radius:20px 20px 0 0;padding:24px;position:relative}
+.det-av{width:58px;height:58px;border-radius:16px;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:12px;box-shadow:0 8px 24px var(--accent-glow)}
+.det-f{padding:11px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:3px}
+.det-f:last-child{border:none}
+.det-l{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.det-v{font-size:14px;font-weight:600;color:var(--text)}
+
+/* Section title */
+.sec-t::before{content:'';display:inline-block;width:3px;height:14px;background:linear-gradient(var(--accent),var(--accent2));border-radius:2px;margin-right:8px;vertical-align:middle;transition:background var(--theme-speed)}
+
+/* Responsive */
+@media(max-width:640px){.desk{display:none!important}.mob{display:flex!important}}
+@media(min-width:641px){.mob{display:none!important}.desk{display:flex!important}}
+
+/* ══════════════════════════════════════════════════════════
+   THEME-SPECIFIC OVERRIDES (applied via body data-phase attribute)
+══════════════════════════════════════════════════════════ */
+
+/* DAWN — 04:00-06:00 — biru gelap + ungu lembut */
+body[data-phase="dawn"] { --bg:#05080f; --bg2:#08091a; }
+body[data-phase="dawn"] .glass { background: rgba(100,80,180,0.05); border-color: rgba(130,100,200,0.12); }
+
+/* MORNING — 06:00-10:00 — warm amber + biru cerah */
+body[data-phase="morning"] {
+  --bg: #0d1015;
+  --text: #f0ebe0;
+  --text-dim: #b8a88a;
+  --muted: #8a7a60;
+  --taskbar-bg: rgba(15,12,8,0.92);
+  --taskbar-bd: rgba(255,200,100,0.1);
+}
+body[data-phase="morning"] .glass { background: rgba(255,180,60,0.04); border-color: rgba(255,180,60,0.1); }
+body[data-phase="morning"] .trow:hover { background: rgba(255,160,40,0.07); }
+
+/* NOON — 10:00-15:00 — terang, biru langit, energik */
+body[data-phase="noon"] {
+  --bg: #f0f4fb;
+  --bg2: #e8edf8;
+  --surface: rgba(30,60,140,0.06);
+  --surface2: rgba(30,60,140,0.10);
+  --border: rgba(30,60,140,0.12);
+  --border-h: rgba(30,100,255,0.4);
+  --text: #1a2340;
+  --text-dim: #4a5a7a;
+  --muted: #7a8aaa;
+  --accent: #1a50e0;
+  --accent2: #2560ff;
+  --accent-glow: rgba(26,80,224,0.2);
+  --accent-dim: rgba(26,80,224,0.08);
+  --gold: #d4880a;
+  --silver: #607080;
+  --bronze: #8a4a10;
+  --wall-a: #c8daf0;
+  --wall-b: #b8cce8;
+  --wall-c: #d0e4f8;
+  --aurora-1: rgba(80,140,255,0.25);
+  --aurora-2: rgba(100,180,255,0.2);
+  --aurora-3: rgba(40,120,220,0.15);
+  --mesh-1: rgba(26,80,224,0.08);
+  --mesh-2: rgba(255,160,0,0.05);
+  --mesh-3: rgba(26,80,224,0.05);
+  --taskbar-bg: rgba(240,244,251,0.95);
+  --taskbar-bd: rgba(30,60,140,0.1);
+  --star-op: 0;
+}
+body[data-phase="noon"] .glass { background: rgba(30,60,140,0.06); border-color: rgba(30,60,140,0.12); box-shadow: 0 2px 16px rgba(30,60,140,0.06); }
+body[data-phase="noon"] .taskbar-logo { color: #1a2340; }
+body[data-phase="noon"] .act-btn { color: #4a5a7a; background: rgba(30,60,140,0.07); border-color: rgba(30,60,140,0.14); }
+body[data-phase="noon"] .act-btn:hover { background: rgba(26,80,224,0.12); color: #1a2340; }
+body[data-phase="noon"] .act-btn.primary { background: linear-gradient(135deg,#1a50e0,#1040c0); color: #fff; }
+body[data-phase="noon"] .start-btn { color: #4a5a7a; background: rgba(30,60,140,0.07); border-color: rgba(30,60,140,0.14); }
+body[data-phase="noon"] .nm { color: #1a2340; }
+body[data-phase="noon"] .trow:hover { background: rgba(26,80,224,0.07); }
+body[data-phase="noon"] .det-box { background: #e8edf8; }
+body[data-phase="noon"] .det-hdr { background: linear-gradient(135deg,rgba(26,80,224,0.1),rgba(80,120,220,0.06)); }
+body[data-phase="noon"] .det-v { color: #1a2340; }
+body[data-phase="noon"] #app-phase-badge { background: rgba(26,80,224,0.1); color: #1a50e0; }
+body[data-phase="noon"] .badge.b2 { color: #607080; }
+body[data-phase="noon"] .badge.bp { background: rgba(30,60,140,0.1); color: #7a8aaa; border-color: rgba(30,60,140,0.2); }
+body[data-phase="noon"] #lock-time { color: #fff; }
+
+/* AFTERNOON — 15:00-17:00 — golden hour hangat */
+body[data-phase="afternoon"] {
+  --bg: #0c0a06;
+  --bg2: #14100a;
+  --surface: rgba(255,160,40,0.05);
+  --surface2: rgba(255,160,40,0.08);
+  --border: rgba(255,160,40,0.1);
+  --border-h: rgba(255,160,40,0.45);
+  --text: #f5e8d0;
+  --text-dim: #c8a878;
+  --muted: #886848;
+  --accent: #e07820;
+  --accent2: #f09030;
+  --accent-glow: rgba(224,120,32,0.28);
+  --accent-dim: rgba(224,120,32,0.12);
+  --wall-a: #1a0e04;
+  --wall-b: #200c06;
+  --wall-c: #160a02;
+  --aurora-1: rgba(255,140,40,0.22);
+  --aurora-2: rgba(255,80,30,0.14);
+  --aurora-3: rgba(200,100,30,0.12);
+  --mesh-1: rgba(255,140,40,0.1);
+  --mesh-2: rgba(255,200,60,0.07);
+  --mesh-3: rgba(200,80,30,0.06);
+  --taskbar-bg: rgba(12,10,6,0.92);
+  --taskbar-bd: rgba(255,140,40,0.1);
+}
+body[data-phase="afternoon"] .glass { background: rgba(255,160,40,0.05); border-color: rgba(255,140,40,0.12); }
+body[data-phase="afternoon"] .act-btn.primary { background: linear-gradient(135deg,rgba(224,120,32,.88),rgba(180,80,20,.88)); }
+body[data-phase="afternoon"] .logo-icon { background: linear-gradient(135deg,#e07820,#b04010); }
+body[data-phase="afternoon"] .sec-t::before { background: linear-gradient(#e07820,#f09030); }
+body[data-phase="afternoon"] .trow:hover { background: rgba(255,140,40,0.07); }
+
+/* DUSK — 17:00-19:00 — senja merah-ungu dramatis */
+body[data-phase="dusk"] {
+  --bg: #080510;
+  --bg2: #0e0818;
+  --surface: rgba(180,60,120,0.05);
+  --surface2: rgba(180,60,120,0.09);
+  --border: rgba(180,60,120,0.1);
+  --border-h: rgba(200,80,180,0.5);
+  --text: #f0e0f5;
+  --text-dim: #c090d0;
+  --muted: #806090;
+  --accent: #c040a0;
+  --accent2: #e060c0;
+  --accent-glow: rgba(192,64,160,0.3);
+  --accent-dim: rgba(192,64,160,0.12);
+  --wall-a: #120818;
+  --wall-b: #0e0520;
+  --wall-c: #100610;
+  --aurora-1: rgba(200,60,120,0.22);
+  --aurora-2: rgba(100,40,180,0.18);
+  --aurora-3: rgba(220,80,60,0.12);
+  --mesh-1: rgba(200,60,120,0.1);
+  --mesh-2: rgba(255,100,60,0.07);
+  --mesh-3: rgba(100,40,180,0.08);
+  --taskbar-bg: rgba(8,5,16,0.92);
+  --taskbar-bd: rgba(180,60,120,0.12);
+}
+body[data-phase="dusk"] .glass { background: rgba(180,60,120,0.05); border-color: rgba(180,60,120,0.12); }
+body[data-phase="dusk"] .act-btn.primary { background: linear-gradient(135deg,rgba(192,64,160,.88),rgba(120,40,120,.88)); }
+body[data-phase="dusk"] .logo-icon { background: linear-gradient(135deg,#c040a0,#8020a0); }
+body[data-phase="dusk"] .sec-t::before { background: linear-gradient(#c040a0,#e060c0); }
+body[data-phase="dusk"] .trow:hover { background: rgba(180,60,120,0.07); }
+body[data-phase="dusk"] .nm { color: #f0e0f5; }
+
+/* NIGHT — 19:00-04:00 — biru gelap dalam, default dark */
+body[data-phase="night"] {
+  --bg: #060a12; --bg2: #0a0f1e;
+  --star-op: 1;
+}
+
   </style>
 </head>
-<body class="p-4 sm:p-8">
+<body data-phase="night">
 
-  <div class="max-w-7xl mx-auto space-y-6">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h1 class="text-2xl font-extrabold text-white">🏆 Dashboard Prestasi</h1>
-        <p class="text-gray-500 text-sm">Data real-time dari Google Sheets</p>
+<!-- SKY INDICATOR -->
+<div id="sky-indicator"></div>
+
+<!-- TRANSITION OVERLAY -->
+<div id="transition-overlay"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     LOCK SCREEN
+══════════════════════════════════════════════════════════ -->
+<div id="lockscreen">
+  <!-- Phase badge top-right -->
+  <div id="time-phase-badge">🌙 Malam</div>
+
+  <!-- Stars -->
+  <div id="stars-container"></div>
+
+  <div class="lock-content">
+    <div id="lock-time" class="fu">00:00</div>
+    <div id="lock-date" class="fu fu1">Senin, 1 Januari 2025</div>
+
+    <div class="user-card fu fu2">
+      <div class="user-avatar">👤</div>
+      <div class="user-name">Administrator</div>
+      <div class="user-role">Dashboard Prestasi Siswa</div>
+      <div id="lock-greeting">Selamat malam</div>
+
+      <button class="btn-open" onclick="unlockApp()">
+        <div class="arrow-icon">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+        Buka Aplikasi
+      </button>
+    </div>
+  </div>
+
+  <div class="hint-text" style="bottom:60px">↑ &nbsp; Klik untuk membuka &nbsp; ↑</div>
+
+  <div class="lock-taskbar">
+    <div class="taskbar-icon">🔇</div>
+    <div class="taskbar-icon">📶</div>
+    <div id="lock-tbar-time" class="taskbar-icon">00:00</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════════════════ -->
+<div id="app">
+  <!-- Taskbar -->
+  <div class="taskbar">
+    <div class="flex items-center gap-3">
+      <div class="start-btn" onclick="lockScreen()">
+        <div style="width:14px;height:14px;display:grid;grid-template-columns:1fr 1fr;gap:2px">
+          <div style="background:currentColor;border-radius:1px;opacity:.7"></div>
+          <div style="background:currentColor;border-radius:1px;opacity:.7"></div>
+          <div style="background:currentColor;border-radius:1px;opacity:.7"></div>
+          <div style="background:currentColor;border-radius:1px;opacity:.7"></div>
+        </div>
+        <span>Start</span>
       </div>
-      <!-- <button onclick="openAdd()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20">
-        + Tambah Data
-      </button> -->
+      <div class="taskbar-logo">
+        <div class="logo-icon">🏆</div>
+        <span class="hidden sm:inline">Prestasi Siswa</span>
+      </div>
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="glass p-5 rounded-2xl border-l-4 border-blue-500">
-        <p class="text-xs font-bold text-gray-500 uppercase">Total Siswa</p>
-        <p id="st-tot" class="text-3xl font-black mt-1">—</p>
+    <div class="flex items-center gap-2">
+      <div class="desk items-center gap-2">
+        <div id="app-phase-badge">🌙 Malam</div>
+        <button onclick="exportCSV()" class="act-btn">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export
+        </button>
+        <button onclick="loadData()" class="act-btn">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Refresh
+        </button>
+        <button onclick="openAdd()" class="act-btn primary">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+          Tambah Data
+        </button>
       </div>
-      <div class="glass p-5 rounded-2xl border-l-4 border-yellow-500">
-        <p class="text-xs font-bold text-gray-500 uppercase">Juara 1</p>
-        <p id="st-j1" class="text-3xl font-black mt-1 text-yellow-500">—</p>
+      <div class="mob items-center gap-1.5">
+        <button onclick="openAdd()" class="act-btn primary" style="padding:5px 10px">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <button onclick="togMob()" class="act-btn" style="padding:5px 10px">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
       </div>
-      <div class="glass p-5 rounded-2xl border-l-4 border-gray-400">
-        <p class="text-xs font-bold text-gray-500 uppercase">Juara 2</p>
-        <p id="st-j2" class="text-3xl font-black mt-1 text-gray-400">—</p>
-      </div>
-      <div class="glass p-5 rounded-2xl border-l-4 border-orange-600">
-        <p class="text-xs font-bold text-gray-500 uppercase">Juara 3</p>
-        <p id="st-j3" class="text-3xl font-black mt-1 text-orange-600">—</p>
-      </div>
-    </div>
-
-    <div class="glass p-6 rounded-2xl">
-      <h3 class="text-sm font-bold mb-4 flex items-center gap-2">
-        <span class="w-1 h-4 bg-blue-500 rounded"></span> Tren Prestasi Per Tahun
-      </h3>
-      <div class="h-[250px]">
-        <canvas id="chart-j"></canvas>
-      </div>
-    </div>
-
-    <div class="glass rounded-2xl overflow-hidden">
-      <div class="p-4 border-b border-white/5 flex flex-wrap gap-3 justify-between items-center">
-        <h3 class="font-bold">Data Prestasi</h3>
-        <input id="srch" type="text" placeholder="Cari nama..." onkeyup="filterTbl()" class="bg-white/5 border border-white/10 rounded-lg px-4 py-1.5 text-sm outline-none focus:border-blue-500 transition-all" />
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead class="bg-white/5 text-gray-400 uppercase text-[10px] tracking-widest">
-            <tr>
-              <th class="p-4">Nama Siswa</th>
-              <th class="p-4">Cabang</th>
-              <th class="p-4 text-center">Tahun</th>
-              <th class="p-4">Juara</th>
-            </tr>
-          </thead>
-          <tbody id="tbl-body" class="divide-y divide-white/5">
-            </tbody>
-        </table>
+      <div class="taskbar-right">
+        <div id="app-time"></div>
       </div>
     </div>
   </div>
 
-  <script>
-    // MASUKKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
-    const API_URL = "https://script.google.com/macros/s/AKfycbxy5OeB_D06M2fD2g3L2EBe08cyISRrBA2pH5dRJG3Xm9oL2OpUd9divnmdiB35zg-m/exec"; 
-    let allData = [];
+  <!-- Mobile menu -->
+  <div id="mob-menu" class="hidden border-b flex-col gap-2" style="flex-shrink:0;background:var(--taskbar-bg);border-color:var(--taskbar-bd);padding:12px 16px">
+    <button onclick="exportCSV();togMob()" class="act-btn" style="justify-content:flex-start">📥 Export CSV</button>
+    <button onclick="loadData();togMob()" class="act-btn" style="justify-content:flex-start">🔄 Refresh</button>
+    <button onclick="openAdd();togMob()" class="act-btn primary" style="justify-content:flex-start">➕ Tambah Data</button>
+    <button onclick="lockScreen();togMob()" class="act-btn" style="justify-content:flex-start">🔒 Kunci Layar</button>
+  </div>
 
-    async function loadData() {
-      try {
-        const res = await fetch(API_URL);
-        allData = await res.json();
-        renderDashboard(allData);
-      } catch (e) { console.error("Error load data:", e); }
+  <!-- Config bar -->
+  <div id="cfg-bar" class="px-4 py-3 border-b" style="background:rgba(240,192,64,.06);border-color:rgba(240,192,64,.15);flex-shrink:0">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <div class="flex-1">
+        <p class="text-xs font-bold mb-1" style="color:#f0c040">⚡ Setup API Google Sheets</p>
+        <input id="api-inp" type="url" placeholder="https://script.google.com/macros/s/AKfycbxZ0k_aT6bpD9geRYWN9bFGeqMf3uRXVam7VQy2k4UR-4PJj_DPWtMSTWMKK7ej6_hd/exec"
+          class="w-full glass rounded-lg px-3 py-2 text-xs border transition-colors" style="color:var(--txt)"/>
+      </div>
+      <div class="flex gap-2 flex-shrink-0">
+        <button onclick="saveAPI()" class="act-btn primary" style="font-size:12px;padding:7px 16px">Simpan & Muat</button>
+        <button onclick="demoMode()" class="act-btn" style="font-size:12px;padding:7px 14px">🎭 Demo</button>
+        <button onclick="hideCfg()" class="act-btn" style="font-size:12px;padding:7px 10px">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App content -->
+  <div class="app-content">
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 fu fu1">
+      <div class="glass stat-card sc-blue rounded-2xl p-4 sm:p-5" style="border-left:3px solid var(--accent)">
+        <p class="text-xs font-bold uppercase tracking-widest" style="color:var(--muted)">Total</p>
+        <p id="st-tot" class="text-3xl sm:text-4xl font-black mt-2 leading-none" style="color:var(--text)">—</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">Siswa</p>
+      </div>
+      <div class="glass stat-card sc-g rounded-2xl p-4 sm:p-5" style="border-left:3px solid var(--gold)">
+        <p class="text-xs font-bold uppercase tracking-widest" style="color:var(--muted)">Juara 1</p>
+        <p id="st-j1" class="text-3xl sm:text-4xl font-black mt-2 leading-none" style="color:var(--gold)">—</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">🥇 Emas</p>
+      </div>
+      <div class="glass stat-card sc-s rounded-2xl p-4 sm:p-5" style="border-left:3px solid var(--silver)">
+        <p class="text-xs font-bold uppercase tracking-widest" style="color:var(--muted)">Juara 2</p>
+        <p id="st-j2" class="text-3xl sm:text-4xl font-black mt-2 leading-none" style="color:var(--silver)">—</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">🥈 Perak</p>
+      </div>
+      <div class="glass stat-card sc-r rounded-2xl p-4 sm:p-5" style="border-left:3px solid var(--bronze)">
+        <p class="text-xs font-bold uppercase tracking-widest" style="color:var(--muted)">Juara 3</p>
+        <p id="st-j3" class="text-3xl sm:text-4xl font-black mt-2 leading-none" style="color:var(--bronze)">—</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">🥉 Perunggu</p>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="glass rounded-2xl p-5 sm:p-6 fu fu2">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+        <div>
+          <h2 class="font-bold text-sm sec-t" style="color:var(--text)">Tren Prestasi Per Tahun</h2>
+          <p class="text-xs mt-0.5 ml-5" style="color:var(--muted)">Kurva juara dari waktu ke waktu</p>
+        </div>
+        <div class="flex items-center gap-4 text-xs ml-5 sm:ml-0">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background:var(--gold)"></span><span style="color:var(--muted)">Juara 1</span></span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background:var(--silver)"></span><span style="color:var(--muted)">Juara 2</span></span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background:var(--bronze)"></span><span style="color:var(--muted)">Juara 3</span></span>
+        </div>
+      </div>
+      <div style="position:relative;height:200px;max-height:260px">
+        <canvas id="chart-j"></canvas>
+      </div>
+      <p id="chart-empty" class="text-center text-xs py-4 hidden" style="color:var(--muted)">Data belum cukup untuk kurva.</p>
+    </div>
+
+    <!-- Table -->
+    <div class="glass rounded-2xl overflow-hidden fu fu3">
+      <div class="px-4 sm:px-5 py-3.5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3" style="border-color:var(--border)">
+        <div>
+          <h2 class="font-bold text-sm sec-t" style="color:var(--text)">Data Prestasi Siswa</h2>
+          <p id="tbl-sub" class="text-xs mt-0.5 ml-5" style="color:var(--muted)">Memuat...</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="relative flex-1 min-w-[160px]">
+            <svg class="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2" style="color:var(--muted)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input id="srch" type="text" placeholder="Cari nama, bidang..." onkeyup="filt()"
+              class="w-full glass rounded-lg pl-8 pr-3 py-2 text-xs border transition-colors" style="border-color:var(--border);color:var(--text)"/>
+          </div>
+          <select id="fil-j" onchange="filt()" class="glass rounded-lg px-3 py-2 text-xs border transition-colors" style="border-color:var(--border);background:transparent;color:var(--text-dim)">
+            <option value="" style="background:var(--bg2)">Semua</option>
+            <option value="Juara 1" style="background:var(--bg2)">Juara 1</option>
+            <option value="Juara 2" style="background:var(--bg2)">Juara 2</option>
+            <option value="Juara 3" style="background:var(--bg2)">Juara 3</option>
+            <option value="Harapan" style="background:var(--bg2)">Harapan</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto hidden sm:block">
+        <table class="w-full text-sm">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th class="px-5 py-3 text-left text-xs font-bold uppercase tracking-wider w-8" style="color:var(--muted)">#</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style="color:var(--muted)">Nama Siswa</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style="color:var(--muted)">NISN</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style="color:var(--muted)">Cabang</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style="color:var(--muted)">Bidang</th>
+              <th class="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider" style="color:var(--muted)">Tahun</th>
+              <th class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider" style="color:var(--muted)">Juara</th>
+              <th class="px-4 py-3 w-10"></th>
+            </tr>
+          </thead>
+          <tbody id="tbl-body">
+            <tr class="trow"><td class="px-5 py-4"><div class="skel h-3 w-4"></div></td><td class="px-4 py-4"><div class="skel h-3 w-36"></div></td><td class="px-4 py-4"><div class="skel h-3 w-20"></div></td><td class="px-4 py-4"><div class="skel h-3 w-28"></div></td><td class="px-4 py-4"><div class="skel h-3 w-20"></div></td><td class="px-4 py-4"><div class="skel h-3 w-10"></div></td><td class="px-4 py-4"><div class="skel h-4 w-16 rounded-full"></div></td><td></td></tr>
+            <tr class="trow"><td class="px-5 py-4"><div class="skel h-3 w-4 opacity-60"></div></td><td class="px-4 py-4"><div class="skel h-3 w-40 opacity-60"></div></td><td class="px-4 py-4"><div class="skel h-3 w-20 opacity-60"></div></td><td class="px-4 py-4"><div class="skel h-3 w-24 opacity-60"></div></td><td class="px-4 py-4"><div class="skel h-3 w-20 opacity-60"></div></td><td class="px-4 py-4"><div class="skel h-3 w-10 opacity-60"></div></td><td class="px-4 py-4"><div class="skel h-4 w-16 rounded-full opacity-60"></div></td><td></td></tr>
+            <tr class="trow"><td class="px-5 py-4"><div class="skel h-3 w-4 opacity-30"></div></td><td class="px-4 py-4"><div class="skel h-3 w-32 opacity-30"></div></td><td class="px-4 py-4"><div class="skel h-3 w-20 opacity-30"></div></td><td class="px-4 py-4"><div class="skel h-3 w-28 opacity-30"></div></td><td class="px-4 py-4"><div class="skel h-3 w-16 opacity-30"></div></td><td class="px-4 py-4"><div class="skel h-3 w-10 opacity-30"></div></td><td class="px-4 py-4"><div class="skel h-4 w-16 rounded-full opacity-30"></div></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="mob-list" class="block sm:hidden divide-y px-3 py-2" style="border-color:var(--border)"></div>
+      <div id="empty-st" class="hidden flex flex-col items-center justify-center py-16 text-center px-4">
+        <div style="width:56px;height:56px;border-radius:16px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+          <svg width="28" height="28" fill="none" stroke="var(--muted)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        </div>
+        <p class="text-sm font-semibold" style="color:var(--text-dim)">Belum ada data</p>
+        <p class="text-xs mt-1" style="color:var(--muted)">Tambah data atau atur API di atas</p>
+      </div>
+    </div>
+
+    <div class="text-center">
+      <p class="text-xs" style="color:var(--muted);font-family:'JetBrains Mono',monospace">Dashboard Prestasi Siswa · <span id="last-upd">—</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div id="modal-add" class="det-ov hidden" style="z-index:200">
+  <div class="det-box si" style="max-width:480px">
+    <div class="det-hdr">
+      <button onclick="closeAdd()" style="position:absolute;top:14px;right:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:14px;transition:all .2s" onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.color='var(--muted)'">✕</button>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">➕ Tambah Prestasi Baru</div>
+      <div style="font-size:11px;color:var(--muted)">Data akan disimpan ke Google Sheets</div>
+    </div>
+    <div style="padding:16px 20px 8px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Nama Siswa *</label>
+          <input id="f-nama" type="text" placeholder="Nama lengkap" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;transition:all .2s;font-family:inherit"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">NISN *</label>
+          <input id="f-nisn" type="text" placeholder="10 digit NISN" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;transition:all .2s;font-family:'JetBrains Mono',monospace"/>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">
+        <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Cabang Lomba *</label>
+        <input id="f-cabang" type="text" placeholder="Contoh: Olimpiade Sains Nasional" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;transition:all .2s;font-family:inherit"/>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">
+        <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Bidang Lomba *</label>
+        <input id="f-bidang" type="text" placeholder="Contoh: Matematika, Fisika, Seni" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;transition:all .2s;font-family:inherit"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Juara *</label>
+          <select id="f-juara" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;transition:all .2s;font-family:inherit;color:var(--text)">
+            <option value="">— Pilih —</option>
+            <option value="Juara 1">🥇 Juara 1</option>
+            <option value="Juara 2">🥈 Juara 2</option>
+            <option value="Juara 3">🥉 Juara 3</option>
+            <option value="Harapan 1">Harapan 1</option>
+            <option value="Harapan 2">Harapan 2</option>
+            <option value="Peserta">Peserta</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Tahun *</label>
+          <input id="f-thn" type="number" min="2000" max="2099" placeholder="2025" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;transition:all .2s;font-family:'JetBrains Mono',monospace"/>
+        </div>
+      </div>
+      <button onclick="submitAdd()" id="submit-btn" style="margin-top:16px;margin-bottom:16px;width:100%;background:linear-gradient(135deg,var(--accent),var(--accent-glow));border:1px solid rgba(99,149,255,.35);border-radius:12px;padding:11px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px var(--accent-glow)">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+        Simpan Data
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div id="det-ov" class="det-ov hidden" style="z-index:200" onclick="closeDet(event)">
+  <div class="det-box si" id="det-box">
+    <div class="det-hdr">
+      <button onclick="closeDetBtn()" style="position:absolute;top:14px;right:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:14px;transition:all .2s" onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'" onmouseout="this.style.background='var(--surface)';this.style.color='var(--muted)'">✕</button>
+      <div id="det-av" class="det-av"></div>
+      <div id="det-name" style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px"></div>
+      <div id="det-badge"></div>
+      <div id="det-nisn" style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:4px"></div>
+    </div>
+    <div id="det-fields" style="padding:4px 20px 8px"></div>
+    <div style="padding:4px 20px 20px">
+      <button onclick="closeDetBtn()" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px;color:var(--text-dim);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div id="notif-ct" style="position:fixed;top:60px;right:16px;z-index:300;max-width:320px;pointer-events:none"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// TIME-BASED THEME ENGINE
+// 6 Phases: dawn | morning | noon | afternoon | dusk | night
+// ══════════════════════════════════════════════════════════════
+
+const PHASES = {
+  dawn: {
+    range: [4, 6],
+    icon: '🌄', label: 'Subuh',
+    greeting: 'Selamat subuh',
+    skyGrad: 'linear-gradient(90deg,#3d2060,#5060c0,#8090d0)',
+    accent: '#6060d0', accent2: '#9090e0',
+    accentGlow: 'rgba(96,96,208,0.28)',
+    accentDim:  'rgba(96,96,208,0.12)',
+    wallA:'#0a0618',wallB:'#0e0a28',wallC:'#08051a',
+    aurora1:'rgba(80,80,200,0.2)',aurora2:'rgba(60,40,160,0.15)',aurora3:'rgba(120,80,200,0.1)',
+    mesh1:'rgba(80,80,200,0.1)',mesh2:'rgba(120,80,220,0.07)',mesh3:'rgba(60,40,160,0.06)',
+    starOp: '0.6',
+  },
+  morning: {
+    range: [6, 10],
+    icon: '🌅', label: 'Pagi',
+    greeting: 'Selamat pagi',
+    skyGrad: 'linear-gradient(90deg,#e08030,#f0b040,#f0d080)',
+    accent: '#d07020', accent2: '#f09030',
+    accentGlow: 'rgba(208,112,32,0.28)',
+    accentDim:  'rgba(208,112,32,0.12)',
+    wallA:'#180e04',wallB:'#240e06',wallC:'#120a02',
+    aurora1:'rgba(240,140,40,0.2)',aurora2:'rgba(220,80,30,0.15)',aurora3:'rgba(200,160,40,0.12)',
+    mesh1:'rgba(240,140,40,0.1)',mesh2:'rgba(255,200,60,0.07)',mesh3:'rgba(200,80,30,0.06)',
+    starOp: '0.2',
+  },
+  noon: {
+    range: [10, 15],
+    icon: '☀️', label: 'Siang',
+    greeting: 'Selamat siang',
+    skyGrad: 'linear-gradient(90deg,#4090f0,#60b0ff,#80d0ff)',
+    accent: '#1a50e0', accent2: '#2560ff',
+    accentGlow: 'rgba(26,80,224,0.2)',
+    accentDim:  'rgba(26,80,224,0.08)',
+    wallA:'#c8daf0',wallB:'#b8cce8',wallC:'#d0e4f8',
+    aurora1:'rgba(80,140,255,0.25)',aurora2:'rgba(100,180,255,0.2)',aurora3:'rgba(40,120,220,0.15)',
+    mesh1:'rgba(26,80,224,0.08)',mesh2:'rgba(255,160,0,0.05)',mesh3:'rgba(26,80,224,0.05)',
+    bg:'#f0f4fb', bg2:'#e8edf8',
+    text:'#1a2340', textDim:'#4a5a7a', muted:'#7a8aaa',
+    taskbarBg:'rgba(240,244,251,0.95)', taskbarBd:'rgba(30,60,140,0.1)',
+    gold:'#d4880a', silver:'#607080', bronze:'#8a4a10',
+    starOp: '0',
+  },
+  afternoon: {
+    range: [15, 17],
+    icon: '🌞', label: 'Sore',
+    greeting: 'Selamat sore',
+    skyGrad: 'linear-gradient(90deg,#e06010,#f08020,#f0c040)',
+    accent: '#e07820', accent2: '#f09030',
+    accentGlow: 'rgba(224,120,32,0.28)',
+    accentDim:  'rgba(224,120,32,0.12)',
+    wallA:'#1a0e04',wallB:'#200c06',wallC:'#160a02',
+    aurora1:'rgba(255,140,40,0.22)',aurora2:'rgba(255,80,30,0.14)',aurora3:'rgba(200,100,30,0.12)',
+    mesh1:'rgba(255,140,40,0.1)',mesh2:'rgba(255,200,60,0.07)',mesh3:'rgba(200,80,30,0.06)',
+    starOp: '0.05',
+  },
+  dusk: {
+    range: [17, 19],
+    icon: '🌆', label: 'Senja',
+    greeting: 'Selamat sore',
+    skyGrad: 'linear-gradient(90deg,#c020a0,#900080,#4010a0)',
+    accent: '#c040a0', accent2: '#e060c0',
+    accentGlow: 'rgba(192,64,160,0.3)',
+    accentDim:  'rgba(192,64,160,0.12)',
+    wallA:'#120818',wallB:'#0e0520',wallC:'#100610',
+    aurora1:'rgba(200,60,120,0.22)',aurora2:'rgba(100,40,180,0.18)',aurora3:'rgba(220,80,60,0.12)',
+    mesh1:'rgba(200,60,120,0.1)',mesh2:'rgba(255,100,60,0.07)',mesh3:'rgba(100,40,180,0.08)',
+    starOp: '0.3',
+  },
+  night: {
+    range: [19, 28], // 19-04 (28=next day 04)
+    icon: '🌙', label: 'Malam',
+    greeting: 'Selamat malam',
+    skyGrad: 'linear-gradient(90deg,#1a2060,#0a1040,#060a20)',
+    accent: '#3d72ff', accent2: '#6090ff',
+    accentGlow: 'rgba(61,114,255,0.28)',
+    accentDim:  'rgba(61,114,255,0.12)',
+    wallA:'#070d1e',wallB:'#0d0820',wallC:'#060e1e',
+    aurora1:'rgba(61,114,255,0.22)',aurora2:'rgba(120,60,220,0.14)',aurora3:'rgba(0,180,200,0.09)',
+    mesh1:'rgba(61,114,255,0.12)',mesh2:'rgba(240,192,64,0.06)',mesh3:'rgba(61,114,255,0.06)',
+    starOp: '1',
+  }
+};
+
+let currentPhase = '';
+let lastMinute = -1;
+
+function getPhase(h) {
+  if (h >= 4  && h < 6)  return 'dawn';
+  if (h >= 6  && h < 10) return 'morning';
+  if (h >= 10 && h < 15) return 'noon';
+  if (h >= 15 && h < 17) return 'afternoon';
+  if (h >= 17 && h < 19) return 'dusk';
+  return 'night';
+}
+
+function applyTheme(phase) {
+  if (phase === currentPhase) return;
+  currentPhase = phase;
+  const p = PHASES[phase];
+  const root = document.documentElement;
+  const body = document.body;
+
+  body.setAttribute('data-phase', phase);
+
+  const set = (k,v) => root.style.setProperty(k, v);
+
+  // Accent colors
+  set('--accent',       p.accent);
+  set('--accent2',      p.accent2);
+  set('--accent-glow',  p.accentGlow);
+  set('--accent-dim',   p.accentDim);
+
+  // Wallpaper
+  set('--wall-a',   p.wallA);
+  set('--wall-b',   p.wallB);
+  set('--wall-c',   p.wallC);
+  set('--aurora-1', p.aurora1);
+  set('--aurora-2', p.aurora2);
+  set('--aurora-3', p.aurora3);
+  set('--mesh-1',   p.mesh1);
+  set('--mesh-2',   p.mesh2);
+  set('--mesh-3',   p.mesh3);
+
+  // Star opacity
+  set('--star-op', p.starOp);
+
+  // Override bg/text for noon (bright theme)
+  if (p.bg)       set('--bg',          p.bg);
+  else            set('--bg',          '#060a12');
+  if (p.bg2)      set('--bg2',         p.bg2);
+  else            set('--bg2',         '#0a0f1e');
+  if (p.text)     set('--text',        p.text);
+  else            set('--text',        '#e8edf5');
+  if (p.textDim)  set('--text-dim',    p.textDim);
+  else            set('--text-dim',    '#94a3b8');
+  if (p.muted)    set('--muted',       p.muted);
+  else            set('--muted',       '#64748b');
+  if (p.taskbarBg) set('--taskbar-bg', p.taskbarBg);
+  else             set('--taskbar-bg', 'rgba(6,10,18,0.92)');
+  if (p.taskbarBd) set('--taskbar-bd', p.taskbarBd);
+  else             set('--taskbar-bd', 'rgba(255,255,255,0.06)');
+  if (p.gold)     set('--gold',        p.gold);
+  else            set('--gold',        '#f0c040');
+  if (p.silver)   set('--silver',      p.silver);
+  else            set('--silver',      '#b0bec5');
+  if (p.bronze)   set('--bronze',      p.bronze);
+  else            set('--bronze',      '#cd7f32');
+
+  // Surface & border for non-data-phase handled phases
+  if (phase === 'noon') {
+    set('--surface',  'rgba(30,60,140,0.06)');
+    set('--surface2', 'rgba(30,60,140,0.10)');
+    set('--border',   'rgba(30,60,140,0.12)');
+    set('--border-h', 'rgba(30,100,255,0.4)');
+  } else {
+    set('--surface',  'rgba(255,255,255,0.04)');
+    set('--surface2', 'rgba(255,255,255,0.07)');
+    set('--border',   'rgba(255,255,255,0.08)');
+    set('--border-h', 'rgba(99,149,255,0.45)');
+  }
+
+  // Sky indicator bar
+  document.getElementById('sky-indicator').style.background = p.skyGrad;
+
+  // Update badges
+  const badgeText = `${p.icon} ${p.label}`;
+  const tb = document.getElementById('time-phase-badge');
+  const ab = document.getElementById('app-phase-badge');
+  if (tb) tb.innerHTML = badgeText;
+  if (ab) ab.innerHTML = badgeText;
+
+  // Update greeting
+  const gr = document.getElementById('lock-greeting');
+  if (gr) gr.textContent = p.greeting;
+
+  // Redraw chart to match new theme colors
+  if (chartInst) {
+    setTimeout(() => renderChart(allData), 600);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// CLOCK + THEME TICK
+// ══════════════════════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
+  const hp = h.toString().padStart(2,'0');
+  const mp = m.toString().padStart(2,'0');
+  const sp = s.toString().padStart(2,'0');
+
+  const lt  = document.getElementById('lock-time');
+  const ltt = document.getElementById('lock-tbar-time');
+  const at  = document.getElementById('app-time');
+  if (lt)  lt.textContent  = `${hp}:${mp}`;
+  if (ltt) ltt.textContent = `${hp}:${mp}`;
+  if (at)  at.textContent  = `${hp}:${mp}:${sp}`;
+
+  const days   = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const ld = document.getElementById('lock-date');
+  if (ld) ld.textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+
+  // Apply theme only when minute changes (avoids constant redraws)
+  if (m !== lastMinute) {
+    lastMinute = m;
+    applyTheme(getPhase(h));
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// STARS
+// ══════════════════════════════════════════════════════════════
+(function(){
+  const c = document.getElementById('stars-container');
+  for (let i = 0; i < 130; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random()*2.5+.5;
+    s.style.cssText = `width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${2+Math.random()*4}s;--del:${-Math.random()*4}s`;
+    c.appendChild(s);
+  }
+})();
+
+// Apply initial theme immediately
+applyTheme(getPhase(new Date().getHours()));
+updateClock();
+setInterval(updateClock, 1000);
+
+// ══════════════════════════════════════════════════════════════
+// LOCK / UNLOCK
+// ══════════════════════════════════════════════════════════════
+function unlockApp() {
+  const ls  = document.getElementById('lockscreen');
+  const ov  = document.getElementById('transition-overlay');
+  const app = document.getElementById('app');
+  const btn = document.querySelector('.btn-open');
+
+  btn.style.transform = 'scale(.95)';
+  btn.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+
+  setTimeout(()=>{ ov.style.opacity='1'; ov.style.pointerEvents='all'; }, 300);
+  setTimeout(()=>{ ls.style.transform='translateY(-100%)'; ls.style.opacity='0'; }, 500);
+  setTimeout(()=>{ app.classList.add('show'); ov.style.opacity='0'; ov.style.pointerEvents='none'; }, 900);
+  setTimeout(()=>{ initApp(); }, 1100);
+}
+
+function lockScreen() {
+  const ls  = document.getElementById('lockscreen');
+  const ov  = document.getElementById('transition-overlay');
+  const app = document.getElementById('app');
+
+  ov.style.opacity='1'; ov.style.pointerEvents='all';
+  setTimeout(()=>{
+    app.classList.remove('show');
+    ls.style.transform='translateY(0)'; ls.style.opacity='1';
+    const btn = document.querySelector('.btn-open');
+    btn.style.transform='';
+    btn.innerHTML=`<div class="arrow-icon"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div> Buka Aplikasi`;
+  }, 300);
+  setTimeout(()=>{ ov.style.opacity='0'; ov.style.pointerEvents='none'; }, 700);
+}
+
+// ══════════════════════════════════════════════════════════════
+// APP LOGIC
+// ══════════════════════════════════════════════════════════════
+let API_URL = localStorage.getItem('api_url')||'';
+let allData=[], isDemo=false, chartInst=null, appInited=false;
+
+const DEMO=[
+  {rowIndex:2,Timestamp:"10/03/2023 08:00",nama_siswa:"Aulia Rahmadani",nisn:"0012345678",cabang_lomba:"Olimpiade Sains",bidang_lomba:"Matematika",juara_lomba:"Juara 1",tahun:"2023"},
+  {rowIndex:3,Timestamp:"12/03/2023 09:15",nama_siswa:"Budi Santoso",nisn:"0023456789",cabang_lomba:"Seni & Budaya",bidang_lomba:"Lukis",juara_lomba:"Juara 2",tahun:"2023"},
+  {rowIndex:4,Timestamp:"05/04/2023 10:30",nama_siswa:"Citra Dewi",nisn:"0034567890",cabang_lomba:"Olimpiade Sains",bidang_lomba:"Fisika",juara_lomba:"Juara 1",tahun:"2023"},
+  {rowIndex:5,Timestamp:"08/05/2023 11:00",nama_siswa:"Dimas Prasetyo",nisn:"0045678901",cabang_lomba:"Olahraga",bidang_lomba:"Bulu Tangkis",juara_lomba:"Juara 3",tahun:"2023"},
+  {rowIndex:6,Timestamp:"10/02/2024 08:45",nama_siswa:"Eva Lestari",nisn:"0056789012",cabang_lomba:"Seni & Budaya",bidang_lomba:"Tari Tradisional",juara_lomba:"Harapan 1",tahun:"2024"},
+  {rowIndex:7,Timestamp:"15/03/2024 10:00",nama_siswa:"Fajar Nugroho",nisn:"0067890123",cabang_lomba:"Olimpiade Sains",bidang_lomba:"Kimia",juara_lomba:"Juara 1",tahun:"2024"},
+  {rowIndex:8,Timestamp:"20/04/2024 09:30",nama_siswa:"Gita Pertiwi",nisn:"0078901234",cabang_lomba:"Olimpiade Sains",bidang_lomba:"Biologi",juara_lomba:"Juara 2",tahun:"2024"},
+  {rowIndex:9,Timestamp:"05/05/2024 14:00",nama_siswa:"Hendra Wijaya",nisn:"0089012345",cabang_lomba:"Teknologi",bidang_lomba:"Robotika",juara_lomba:"Juara 1",tahun:"2024"},
+  {rowIndex:10,Timestamp:"10/02/2025 08:00",nama_siswa:"Indah Sari",nisn:"0090123456",cabang_lomba:"Olahraga",bidang_lomba:"Renang",juara_lomba:"Juara 3",tahun:"2025"},
+  {rowIndex:11,Timestamp:"14/03/2025 11:15",nama_siswa:"Joko Prabowo",nisn:"0001234567",cabang_lomba:"Teknologi",bidang_lomba:"Coding",juara_lomba:"Juara 1",tahun:"2025"},
+  {rowIndex:12,Timestamp:"22/03/2025 09:00",nama_siswa:"Kartika Sari",nisn:"0012340000",cabang_lomba:"Olimpiade Sains",bidang_lomba:"Astronomi",juara_lomba:"Juara 2",tahun:"2025"},
+];
+
+const AVC=[
+  ['#3d72ff','#2550e0'],['#7c3aed','#5b21b6'],['#059669','#065f46'],
+  ['#db2777','#9d174d'],['#d97706','#92400e'],['#0891b2','#164e63'],['#dc2626','#991b1b']
+];
+const avc=n=>AVC[(n||'?').charCodeAt(0)%AVC.length];
+
+function initApp() {
+  if (appInited) return;
+  appInited = true;
+  if (API_URL) {
+    document.getElementById('api-inp').value = API_URL;
+    document.getElementById('cfg-bar').style.display='none';
+    loadData();
+  } else {
+    setTimeout(()=>showNotif('w','⚙️ Masukkan URL API atau klik Demo untuk melihat contoh data'), 600);
+  }
+}
+
+function saveAPI() {
+  const u = document.getElementById('api-inp').value.trim();
+  if (!u.startsWith('https://')) { showNotif('e','❌ URL tidak valid'); return; }
+  API_URL=u; localStorage.setItem('api_url',u); isDemo=false;
+  hideCfg(); loadData();
+}
+function demoMode() { isDemo=true; hideCfg(); allData=DEMO; renderAll(allData); }
+function hideCfg()  { document.getElementById('cfg-bar').style.display='none'; }
+function togMob()   { document.getElementById('mob-menu').classList.toggle('hidden'); }
+
+async function loadData() {
+  if (isDemo) { renderAll(allData); return; }
+  try {
+    const r = await fetch(API_URL);
+    const d = await r.json();
+    allData = Array.isArray(d) ? d : (d.data||[]);
+    renderAll(allData);
+    document.getElementById('last-upd').textContent = 'Update: '+new Date().toLocaleString('id-ID');
+    showNotif('s',`✅ ${allData.length} data dimuat`);
+  } catch(e) {
+    document.getElementById('empty-st').classList.remove('hidden');
+    document.getElementById('tbl-sub').textContent='Gagal memuat';
+    showNotif('e','❌ Gagal: '+e.message);
+  }
+}
+
+function renderAll(d) {
+  stats(d); renderTbl(d); renderMobCards(d); renderChart(d);
+  document.getElementById('tbl-sub').textContent=`${d.length} data${isDemo?' (Demo)':''}`;
+  if (isDemo) document.getElementById('last-upd').textContent='Mode Demo';
+}
+
+const gN=r=>r.nama_siswa||r["Nama Siswa"]||'—';
+const gI=r=>String(r.nisn||r.Nisn||r.NISN||'—');
+const gC=r=>r.cabang_lomba||r["Cabang Lomba"]||'—';
+const gB=r=>r.bidang_lomba||r["BIDANG LOMBA"]||r["Bidang Lomba"]||'—';
+const gJ=r=>r.juara_lomba||r["JUARA LOMBA"]||'—';
+const gT=r=>r.tahun||r.Tahun||(r.Timestamp?r.Timestamp.split('/')[2]?.substring(0,4):'')||'—';
+const gTs=r=>r.Timestamp||'—';
+
+const bCls=j=>j==='Juara 1'?'badge b1':j==='Juara 2'?'badge b2':j==='Juara 3'?'badge b3':j.includes('Harapan')?'badge bh':'badge bp';
+const bIco=j=>j==='Juara 1'?'🥇':j==='Juara 2'?'🥈':j==='Juara 3'?'🥉':'';
+
+function stats(d) {
+  animN('st-tot',d.length);
+  animN('st-j1',d.filter(r=>gJ(r)==='Juara 1').length);
+  animN('st-j2',d.filter(r=>gJ(r)==='Juara 2').length);
+  animN('st-j3',d.filter(r=>gJ(r)==='Juara 3').length);
+}
+function animN(id,t) {
+  const el=document.getElementById(id); let c=0;
+  const s=Math.max(1,Math.ceil(t/20));
+  const iv=setInterval(()=>{ c=Math.min(c+s,t); el.textContent=c; if(c>=t) clearInterval(iv); },40);
+}
+
+function renderTbl(d) {
+  const tb=document.getElementById('tbl-body');
+  document.getElementById('empty-st').classList.add('hidden');
+  if (!d.length) { tb.innerHTML=''; document.getElementById('empty-st').classList.remove('hidden'); return; }
+  tb.innerHTML=d.map((r,i)=>{
+    const j=gJ(r),n=gN(r);
+    const [c1,c2]=avc(n);
+    const rj=JSON.stringify(r).replace(/\\/g,'\\\\').replace(/"/g,'&quot;');
+    return `<tr class="trow" style="animation:fadeUp .3s ease both;animation-delay:${i*.025}s" onclick="openDet('${rj}')">
+      <td class="px-5 py-3" style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace">${i+1}</td>
+      <td class="px-4 py-3">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="av" style="background:linear-gradient(135deg,${c1},${c2})">${n[0].toUpperCase()}</div>
+          <span class="nm">${n}</span>
+        </div>
+      </td>
+      <td class="px-4 py-3" style="color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace">${gI(r)}</td>
+      <td class="px-4 py-3" style="color:var(--text-dim);font-size:13px">${gC(r)}</td>
+      <td class="px-4 py-3" style="color:var(--text-dim);font-size:13px">${gB(r)}</td>
+      <td class="px-4 py-3 text-center" style="color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace">${gT(r)}</td>
+      <td class="px-4 py-3"><span class="${bCls(j)}">${bIco(j)} ${j}</span></td>
+      <td class="px-4 py-3">
+        <button onclick="event.stopPropagation();delRow(${r.rowIndex})" style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;border-radius:6px;transition:all .2s;display:flex;align-items:center" onmouseover="this.style.background='rgba(239,68,68,.12)';this.style.color='#ef4444'" onmouseout="this.style.background='none';this.style.color='var(--muted)'">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderMobCards(d) {
+  const el=document.getElementById('mob-list');
+  if (!d.length) { el.innerHTML=''; return; }
+  el.innerHTML=d.map((r,i)=>{
+    const j=gJ(r),n=gN(r);
+    const [c1,c2]=avc(n);
+    const rj=JSON.stringify(r).replace(/\\/g,'\\\\').replace(/"/g,'&quot;');
+    return `<div style="padding:12px 4px;border-bottom:1px solid var(--border);animation:fadeUp .3s ease both;animation-delay:${i*.03}s;cursor:pointer;transition:background .2s;border-radius:8px" onclick="openDet('${rj}')" onmouseover="this.style.background='var(--accent-dim)'" onmouseout="this.style.background='transparent'">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="av" style="background:linear-gradient(135deg,${c1},${c2});width:38px;height:38px;border-radius:11px;font-size:15px">${n[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;color:var(--text);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n}</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">${gI(r)} · ${gT(r)}</div>
+        </div>
+        <span class="${bCls(j)}">${bIco(j)} ${j}</span>
+      </div>
+      <div style="margin-top:6px;display:flex;gap:12px;font-size:10px;color:var(--muted);padding-left:48px">
+        <span>📂 ${gC(r)}</span><span>🎯 ${gB(r)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filt() {
+  const q=document.getElementById('srch').value.toLowerCase();
+  const jf=document.getElementById('fil-j').value;
+  const f=allData.filter(r=>{
+    const m=!q||[gN(r),gI(r),gB(r),gC(r)].some(v=>v.toLowerCase().includes(q));
+    const mj=!jf||gJ(r).includes(jf);
+    return m&&mj;
+  });
+  document.getElementById('tbl-sub').textContent=`${f.length} dari ${allData.length} data`;
+  renderTbl(f); renderMobCards(f);
+}
+
+function renderChart(d) {
+  const by={};
+  d.forEach(r=>{ const y=gT(r),j=gJ(r); if(!by[y])by[y]={j1:0,j2:0,j3:0}; if(j==='Juara 1')by[y].j1++;else if(j==='Juara 2')by[y].j2++;else if(j==='Juara 3')by[y].j3++; });
+  const yrs=Object.keys(by).filter(y=>y!=='—').sort();
+  const ce=document.getElementById('chart-empty'),cv=document.getElementById('chart-j');
+  if (!yrs.length) { cv.style.display='none'; ce.classList.remove('hidden'); return; }
+  cv.style.display='block'; ce.classList.add('hidden');
+  if (chartInst) { chartInst.destroy(); chartInst=null; }
+
+  // Get current theme colors
+  const s = getComputedStyle(document.documentElement);
+  const gold   = s.getPropertyValue('--gold').trim()   || '#f0c040';
+  const silver = s.getPropertyValue('--silver').trim() || '#b0bec5';
+  const bronze = s.getPropertyValue('--bronze').trim() || '#cd7f32';
+  const muted  = s.getPropertyValue('--muted').trim()  || '#64748b';
+  const bg2    = s.getPropertyValue('--bg2').trim()    || '#0a0f1e';
+  const accent = s.getPropertyValue('--accent').trim() || '#3d72ff';
+
+  chartInst=new Chart(cv.getContext('2d'),{
+    type:'line',
+    data:{
+      labels:yrs,
+      datasets:[
+        {label:'Juara 1',data:yrs.map(y=>by[y].j1),borderColor:gold,backgroundColor:gold+'22',borderWidth:2.5,pointRadius:5,pointHoverRadius:8,pointBackgroundColor:gold,pointBorderColor:bg2,pointBorderWidth:2,tension:.4,fill:true},
+        {label:'Juara 2',data:yrs.map(y=>by[y].j2),borderColor:silver,backgroundColor:silver+'18',borderWidth:2.5,pointRadius:5,pointHoverRadius:8,pointBackgroundColor:silver,pointBorderColor:bg2,pointBorderWidth:2,tension:.4,fill:true},
+        {label:'Juara 3',data:yrs.map(y=>by[y].j3),borderColor:bronze,backgroundColor:bronze+'18',borderWidth:2.5,pointRadius:5,pointHoverRadius:8,pointBackgroundColor:bronze,pointBorderColor:bg2,pointBorderWidth:2,tension:.4,fill:true},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:bg2,
+          borderColor:accent+'66',borderWidth:1,
+          titleColor:'#e8edf5',bodyColor:muted,padding:12,
+          callbacks:{title:i=>`📅 Tahun ${i[0].label}`,label:i=>`  ${i.dataset.label}: ${i.raw}`}
+        }
+      },
+      scales:{
+        x:{grid:{color:'rgba(128,128,128,0.06)',drawBorder:false},ticks:{color:muted,font:{family:'JetBrains Mono',size:10}},border:{display:false}},
+        y:{beginAtZero:true,grid:{color:'rgba(128,128,128,0.06)',drawBorder:false},ticks:{color:muted,font:{family:'JetBrains Mono',size:10},stepSize:1,callback:v=>Number.isInteger(v)?v:''},border:{display:false}}
+      }
     }
+  });
+}
 
-    function renderDashboard(data) {
-      // Stats
-      document.getElementById('st-tot').innerText = data.length;
-      document.getElementById('st-j1').innerText = data.filter(d => d.juara_lomba === 'Juara 1').length;
-      document.getElementById('st-j2').innerText = data.filter(d => d.juara_lomba === 'Juara 2').length;
-      document.getElementById('st-j3').innerText = data.filter(d => d.juara_lomba === 'Juara 3').length;
+function openDet(rStr) {
+  let r; try{r=JSON.parse(rStr.replace(/&quot;/g,'"'));}catch(e){return;}
+  const n=gN(r),j=gJ(r);
+  const [c1,c2]=avc(n);
+  const av=document.getElementById('det-av');
+  av.style.background=`linear-gradient(135deg,${c1},${c2})`; av.textContent=n[0].toUpperCase();
+  document.getElementById('det-name').textContent=n;
+  document.getElementById('det-nisn').textContent='NISN: '+gI(r);
+  document.getElementById('det-badge').innerHTML=`<span class="${bCls(j)}" style="font-size:12px;padding:3px 12px">${bIco(j)} ${j}</span>`;
+  document.getElementById('det-fields').innerHTML=[
+    {i:'🪪',l:'NISN',v:gI(r)},
+    {i:'📂',l:'Cabang Lomba',v:gC(r)},
+    {i:'🎯',l:'Bidang Lomba',v:gB(r)},
+    {i:'📅',l:'Tahun Prestasi',v:gT(r)},
+    {i:'🕐',l:'Tanggal Input',v:gTs(r)},
+    {i:'🏆',l:'Penghargaan',v:j},
+  ].map(f=>`<div class="det-f"><span class="det-l">${f.i} ${f.l}</span><span class="det-v">${f.v}</span></div>`).join('');
+  const ov=document.getElementById('det-ov');
+  ov.classList.remove('hidden');
+  const box=document.getElementById('det-box');
+  box.style.animation='none';
+  requestAnimationFrame(()=>{ box.style.animation='scaleIn .35s cubic-bezier(.34,1.56,.64,1) both'; });
+  document.body.style.overflow='hidden';
+}
+function closeDet(e) { if(e.target===document.getElementById('det-ov')) closeDetBtn(); }
+function closeDetBtn() { document.getElementById('det-ov').classList.add('hidden'); document.body.style.overflow=''; }
 
-      // Table
-      const body = document.getElementById('tbl-body');
-      body.innerHTML = data.map(item => `
-        <tr class="trow" onclick='showPopup(${JSON.stringify(item)})'>
-          <td class="p-4 font-semibold name-text">${item.nama_siswa}</td>
-          <td class="p-4 text-gray-400">${item.cabang_lomba}</td>
-          <td class="p-4 text-center">${item.tahun || '-'}</td>
-          <td class="p-4">
-            <span class="px-3 py-1 rounded-full text-[10px] font-bold ${item.juara_lomba.includes('1') ? 'bg-yellow-500/20 text-yellow-500' : 'bg-blue-500/20 text-blue-400'}">
-              ${item.juara_lomba}
-            </span>
-          </td>
-        </tr>
-      `).join('');
+function openAdd() { document.getElementById('modal-add').classList.remove('hidden'); document.getElementById('f-thn').value=new Date().getFullYear(); }
+function closeAdd() { document.getElementById('modal-add').classList.add('hidden'); }
 
-      renderChart(data);
-    }
+async function submitAdd() {
+  const n=document.getElementById('f-nama').value.trim();
+  const ni=document.getElementById('f-nisn').value.trim();
+  const c=document.getElementById('f-cabang').value.trim();
+  const b=document.getElementById('f-bidang').value.trim();
+  const j=document.getElementById('f-juara').value;
+  const t=document.getElementById('f-thn').value.trim();
+  if (!n||!ni||!c||!b||!j) { showNotif('e','⚠️ Semua field wajib diisi'); return; }
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true; btn.innerHTML='<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+  if (isDemo) {
+    const now=new Date().toLocaleDateString('id-ID')+' '+new Date().toLocaleTimeString('id-ID');
+    allData.push({rowIndex:allData.length+2,Timestamp:now,nama_siswa:n,nisn:ni,cabang_lomba:c,bidang_lomba:b,juara_lomba:j,tahun:t});
+    renderAll(allData); closeAdd(); resetForm(); showNotif('s','✅ Data ditambahkan (Demo)');
+    btn.disabled=false; btn.innerHTML='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg> Simpan Data';
+    return;
+  }
+  try {
+    const res=await fetch(`${API_URL}?action=addData`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({namaSiswa:n,nisn:ni,cabangLomba:c,bidangLomba:b,juaraLomba:j,tahun:t})});
+    const d=await res.json();
+    if (d.success) { closeAdd(); resetForm(); showNotif('s','✅ Tersimpan ke Google Sheets'); await loadData(); }
+    else throw new Error(d.error);
+  } catch(e) { showNotif('e','❌ '+e.message); }
+  btn.disabled=false; btn.innerHTML='<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg> Simpan Data';
+}
+function resetForm() { ['f-nama','f-nisn','f-cabang','f-bidang','f-thn'].forEach(id=>document.getElementById(id).value=''); document.getElementById('f-juara').value=''; }
 
-    function showPopup(item) {
-      // Gunakan alert bawaan browser atau ganti dengan library Modal pilihan Anda
-      alert(`DETAIL SISWA\n\nNama: ${item.nama_siswa}\nNISN: ${item.nisn}\nCabang: ${item.cabang_lomba}\nBidang: ${item.bidang_lomba}\nJuara: ${item.juara_lomba}\nTahun: ${item.tahun}`);
-    }
+async function delRow(ri) {
+  if (!confirm('Hapus data ini?')) return;
+  if (isDemo) { allData=allData.filter(r=>r.rowIndex!==ri); renderAll(allData); showNotif('s','🗑️ Dihapus'); return; }
+  try {
+    const res=await fetch(`${API_URL}?action=deleteRow`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rowIndex:ri})});
+    const d=await res.json();
+    if (d.success) { showNotif('s','🗑️ Data dihapus'); await loadData(); } else throw new Error(d.error);
+  } catch(e) { showNotif('e','❌ '+e.message); }
+}
 
-    function renderChart(data) {
-      const ctx = document.getElementById('chart-j').getContext('2d');
-      const years = [...new Set(data.map(d => d.tahun))].sort();
-      const counts = years.map(y => data.filter(d => d.tahun == y).length);
+function exportCSV() {
+  if (!allData.length) { showNotif('e','⚠️ Tidak ada data'); return; }
+  const h=['Timestamp','Nama Siswa','NISN','Cabang Lomba','Bidang Lomba','Juara Lomba','Tahun'];
+  const rows=allData.map(r=>[gTs(r),gN(r),gI(r),gC(r),gB(r),gJ(r),gT(r)].map(v=>`"${v||''}"`).join(','));
+  const blob=new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`prestasi_${Date.now()}.csv`; a.click();
+  showNotif('s','📥 CSV diunduh');
+}
 
-      if(window.myChart) window.myChart.destroy();
-      window.myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: years,
-          datasets: [{
-            label: 'Total Juara',
-            data: counts,
-            borderColor: '#3d72ff',
-            backgroundColor: 'rgba(61,114,255,0.1)',
-            fill: true,
-            tension: 0.4
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-      });
-    }
+let nTo;
+function showNotif(t,msg) {
+  clearTimeout(nTo);
+  const ct=document.getElementById('notif-ct');
+  const clr=t==='s'?'rgba(34,197,94,.25)':t==='w'?'rgba(245,158,11,.25)':'rgba(239,68,68,.25)';
+  const tc=t==='s'?'#4ade80':t==='w'?'#fbbf24':'#f87171';
+  ct.innerHTML=`<div class="ne" style="background:var(--bg2);border:1px solid ${clr};border-radius:12px;padding:11px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+    <span style="font-size:16px">${t==='s'?'✅':t==='w'?'⚡':'❌'}</span>
+    <span style="font-size:12px;font-weight:500;color:${tc}">${msg}</span>
+  </div>`;
+  nTo=setTimeout(()=>{ const el=ct.firstChild; if(el){el.style.animation='notifOut .3s ease forwards';setTimeout(()=>ct.innerHTML='',350);} },4000);
+}
 
-    window.onload = loadData;
-  </script>
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closeDetBtn();closeAdd();} });
+</script>
 </body>
 </html>
