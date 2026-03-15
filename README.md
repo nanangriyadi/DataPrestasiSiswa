@@ -60,7 +60,8 @@ Vercel akan secara otomatis mendeteksi file index.html dan melakukan deployment.
 
 📂 Struktur File
 Bash
-.
+
+
 ├── index.html    # Tampilan utama & Logika Frontend
 
 ├── kode.gs       # Logic API untuk Google Apps Script
