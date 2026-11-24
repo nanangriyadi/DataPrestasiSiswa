@@ -1,126 +1,315 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Prestasi Siswa</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prestasi Dashboard – Rekap Data Lomba</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Outfit', 'system-ui', 'sans-serif'], serif: ['Lora', 'Georgia', 'serif'] },
+  colors: { teal: { 700:'#0f5c5a', 800:'#0b4745', 900:'#073533' }, cream: '#f4f8f4', gold: '#e3a72f', coral: '#d9604c' }
+} } };
+</script>
+<style>
+  body { background:#f4f8f4; }
+  .wrap { padding-left:10%; padding-right:10%; width:100%; }
+  .card { background:#fff; border-radius:18px; box-shadow:0 2px 14px rgba(7,53,51,.09); }
+  .corner { position:absolute; top:-18px; right:-18px; width:64px; height:64px; border-radius:50%; display:flex; align-items:flex-end; justify-content:flex-start; padding:0 0 12px 14px; font-size:20px; }
+  th.sortable { cursor:pointer; user-select:none; }
+  .name-btn:hover { text-decoration:underline; }
+  .fade-in { animation: fi .18s ease-out; }
+  @keyframes fi { from { opacity:0; transform:scale(.98);} to { opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce) { .fade-in { animation:none; } }
+</style>
 </head>
-<body class="bg-gray-50 font-sans antialiased">
+<body class="font-sans text-teal-900">
 
-    <div class="max-w-7xl mx-auto px-4 py-8">
-        <header class="mb-10 text-center">
-            <h1 class="text-4xl font-extrabold text-indigo-700">🏆 Data Prestasi Siswa</h1>
-            <p class="text-gray-500 mt-2">Monitoring hasil lomba secara real-time</p>
-        </header>
+<!-- ====== KONFIGURASI ====== -->
+<script>
+  // Tempel URL Web App Apps Script (berakhiran /exec). Kosong = data contoh.
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwYgK_2fl3KflG7_iag5nj_pPT3eU3wu4ogb3smZzuNKvDV6apd2kdBYKISEEy9sps/exec';
+</script>
 
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-10">
-            <h3 class="text-xl font-bold mb-4 text-gray-700">Statistik Juara Per Tahun</h3>
-            <div class="h-64">
-                <canvas id="chartJuara"></canvas>
-            </div>
-        </div>
-        
-        <div class="overflow-x-auto bg-white rounded-2xl shadow-lg border border-gray-100">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-indigo-600 text-white">
-                        <th class="p-4">Nama Siswa</th>
-                        <th class="p-4">NISN</th>
-                        <th class="p-4">Cabang Lomba</th>
-                        <th class="p-4">Bidang Lomba</th>
-                        <th class="p-4">Tingkat Lomba</th>
-                        <th class="p-4">Juara Lomba</th>
-                        <th class="p-4">Tahun Keikutsertaan</th>
-                        <th class="p-4">Sertifikat</th>
-                        <th class="p-4 text-center">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    </tbody>
-            </table>
-        </div>
+<header class="bg-teal-800 text-white">
+  <div class="wrap py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gold flex items-center justify-center text-xl" aria-hidden="true">🏆</div>
+      <div class="leading-tight">
+        <p class="font-serif font-bold text-lg">Prestasi Dashboard</p>
+        <p class="text-[10px] tracking-wide text-teal-100/80">Data Lomba Siswa</p>
+      </div>
     </div>
+    <div class="flex items-center gap-2">
+      <span id="src" class="hidden sm:inline text-[11px] bg-teal-900/60 text-emerald-300 rounded-full px-3 py-1">● Google Sheets</span>
+      <button onclick="loadData()" class="text-xs font-semibold border border-white/30 rounded-xl px-4 py-2 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">⟳ Refresh</button>
+    </div>
+  </div>
+</header>
 
-    <script>
-        // GANTI DENGAN URL WEB APP GAS KAMU
-        const API_URL = "https://script.google.com/macros/s/AKfycbxZ0k_aT6bpD9geRYWN9bFGeqMf3uRXVam7VQy2k4UR-4PJj_DPWtMSTWMKK7ej6_hd/exec";
+<main class="wrap py-6 space-y-5">
 
-        async function fetchData() {
-            try {
-                const response = await fetch(API_URL);
-                const data = await response.json();
-                renderTable(data);
-                renderChart(data);
-            } catch (err) {
-                console.error("Gagal memuat data", err);
-            }
-        }
+  <div>
+    <h1 class="font-serif text-4xl font-bold">Rekap Prestasi Lomba</h1>
+    <p class="text-sm text-slate-500 mt-1"><b id="hTotal" class="text-teal-700">0 data</b> terdaftar · <span id="hTime">Memuat…</span></p>
+  </div>
 
-        function renderTable(data) {
-            const container = document.getElementById('tableBody');
-            container.innerHTML = data.map((item, index) => `
-                <tr class="border-b hover:bg-indigo-50 transition-colors duration-200 cursor-pointer group" onclick="showDetail(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                    <td class="p-4 font-semibold text-gray-700">${item.nama_siswa}</td>
-                    <td class="p-4 text-gray-600">${item.cabang_lomba}</td>
-                    <td class="p-4">
-                        <span class="px-3 py-1 rounded-full text-xs font-bold ${item.juara_lomba.includes('1') ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}">
-                            ${item.juara_lomba}
-                        </span>
-                    </td>
-                    <td class="p-4 text-center">
-                        <button class="text-indigo-600 group-hover:scale-125 transition-transform">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
+  <section class="grid grid-cols-2 md:grid-cols-5 gap-3" id="stats"></section>
 
-        function showDetail(item) {
-            Swal.fire({
-                title: `<span class="text-indigo-600">${item.nama_siswa}</span>`,
-                html: `
-                    <div class="text-left space-y-2 p-2">
-                        <p><strong>NISN:</strong> ${item.nisn}</p>
-                        <p><strong>Cabang:</strong> ${item.cabang_lomba}</p>
-                        <p><strong>Bidang:</strong> ${item.bidang_lomba}</p>
-                        <p><strong>Pencapaian:</strong> ${item.juara_lomba}</p>
-                        <p class="text-xs text-gray-400 mt-4 italic">Terdata pada: ${item.timestamp}</p>
-                    </div>
-                `,
-                icon: 'info',
-                confirmButtonColor: '#4F46E5'
-            });
-        }
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="card p-5">
+      <h2 class="text-[11px] font-bold tracking-wider text-slate-500 mb-2">TINGKAT LOMBA</h2>
+      <div class="h-60"><canvas id="cTingkat"></canvas></div>
+    </div>
+    <div class="card p-5">
+      <h2 class="text-[11px] font-bold tracking-wider text-slate-500 mb-2">CABANG LOMBA</h2>
+      <div class="h-60"><canvas id="cCabang"></canvas></div>
+    </div>
+    <div class="card p-5">
+      <h2 class="text-[11px] font-bold tracking-wider text-slate-500 mb-2">KEIKUTSERTAAN PER TAHUN</h2>
+      <div class="h-60"><canvas id="cTahun"></canvas></div>
+    </div>
+  </section>
 
-        function renderChart(data) {
-            const ctx = document.getElementById('chartJuara').getContext('2d');
-            // Logika sederhana mengambil tahun dari timestamp
-            const years = [...new Set(data.map(d => new Date(d.timestamp).getFullYear()))].sort();
-            const counts = years.map(y => data.filter(d => new Date(d.timestamp).getFullYear() === y).length);
+  <section class="card overflow-hidden">
+    <div class="p-5 flex flex-wrap items-center justify-between gap-3">
+      <h2 class="font-serif text-xl font-bold">Daftar Prestasi</h2>
+      <div class="flex flex-wrap items-center gap-2">
+        <input id="q" type="search" placeholder="Cari nama, NISN, cabang…" class="bg-cream rounded-full px-4 py-2 text-xs w-52 focus:outline-none focus:ring-2 focus:ring-teal-700/40">
+        <select id="fTingkat" class="bg-cream rounded-full px-4 py-2 text-xs"><option value="">Semua Tingkat</option></select>
+        <select id="fTahun" class="bg-cream rounded-full px-4 py-2 text-xs"><option value="">Semua Tahun</option></select>
+        <select id="fJuara" class="bg-cream rounded-full px-4 py-2 text-xs">
+          <option value="">Semua Juara</option><option value="1">Juara 1</option><option value="2">Juara 2</option><option value="3">Juara 3</option><option value="lain">Lainnya</option>
+        </select>
+        <span id="cnt" class="text-xs text-slate-500"></span>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead class="bg-cream text-slate-500 text-left">
+          <tr class="[&>th]:px-4 [&>th]:py-3 [&>th]:font-bold [&>th]:tracking-wide">
+            <th>#</th>
+            <th class="sortable" data-k="nama">NAMA SISWA ⇅</th>
+            <th class="sortable" data-k="nisn">NISN ⇅</th>
+            <th>CABANG</th><th>BIDANG</th><th>TINGKAT</th>
+            <th class="sortable" data-k="tahun">TAHUN ⇅</th>
+            <th>JUARA</th><th>SERTIFIKAT</th>
+          </tr>
+        </thead>
+        <tbody id="tbody" class="divide-y divide-slate-100 align-top"></tbody>
+      </table>
+    </div>
+    <p id="empty" class="hidden p-8 text-center text-sm text-slate-500">Tidak ada data yang cocok. Ubah kata kunci atau filter.</p>
+  </section>
+</main>
 
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: years,
-                    datasets: [{
-                        label: 'Total Prestasi',
-                        data: counts,
-                        borderColor: '#4F46E5',
-                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
+<!-- Popup detail -->
+<div id="modal" class="hidden fixed inset-0 z-50 bg-teal-900/60 p-4 overflow-y-auto" onclick="if(event.target===this)closeModal()" role="dialog" aria-modal="true" aria-labelledby="mNama">
+  <div class="card fade-in max-w-2xl mx-auto my-6 overflow-hidden">
+    <div class="bg-teal-800 text-white px-6 py-5 flex items-start justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div id="mAvatar" class="w-14 h-14 rounded-2xl bg-gold text-teal-900 font-serif font-bold text-2xl flex items-center justify-center"></div>
+        <div>
+          <h3 id="mNama" class="font-serif text-2xl font-bold leading-tight"></h3>
+          <p id="mSub" class="text-xs text-teal-100/80 mt-1"></p>
+        </div>
+      </div>
+      <button onclick="closeModal()" class="text-3xl leading-none px-2 hover:text-gold" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="p-6 space-y-5">
+      <div id="mBadges" class="flex flex-wrap gap-2"></div>
+      <dl id="mBody" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm"></dl>
+      <div>
+        <p class="text-[11px] font-bold tracking-wider text-slate-500 mb-2">SERTIFIKAT LOMBA</p>
+        <div id="mFoto"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        fetchData();
-    </script>
+<script>
+const DEMO = [
+  {id:2,timestamp:'16/04/2026 11:58:42',nama:'BAGAS KURNIAWAN',nisn:'0099151521',cabang:'FLS3N',bidang:'TARI',tingkat:'Kabupaten',tahun:'2026',sertifikat:'',juara:'JUARA 2'}
+];
+
+let ALL = [], charts = {}, sortK = '', sortDir = 1;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// Peringkat juara: 1, 2, 3 atau 0 (lainnya / harapan / peserta)
+function rank(v) {
+  v = String(v || '').toLowerCase();
+  if (/harapan/.test(v)) return 0;
+  let m = v.match(/\b([123])\b/); if (m) return +m[1];
+  if (/\biii\b|ketiga/.test(v)) return 3;
+  if (/\bii\b|kedua/.test(v)) return 2;
+  if (/\bi\b|pertama|emas/.test(v)) return 1;
+  return 0;
+}
+const juaraPill = d => {
+  const r = rank(d.juara), t = d.juara || 'Peserta';
+  const cls = r === 1 ? 'bg-amber-100 text-amber-800' : r === 2 ? 'bg-slate-200 text-slate-700' : r === 3 ? 'bg-orange-100 text-orange-800' : 'bg-teal-50 text-teal-800';
+  return `<span class="inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ${cls}">${esc(t)}</span>`;
+};
+const pill = (t, cls) => t ? `<span class="inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold ${cls}">${esc(t)}</span>` : '';
+
+// ---------- Google Drive ----------
+function driveIds(text) {
+  const out = [];
+  String(text || '').split(/[\s,;]+/).forEach(u => {
+    if (!/^https?:/.test(u)) return;
+    const m = u.match(/[?&]id=([\w-]+)/) || u.match(/\/d\/([\w-]+)/);
+    out.push({ id: m ? m[1] : '', url: u });
+  });
+  return out;
+}
+
+// ---------- Ambil data (JSONP) ----------
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Date.now();
+    const s = document.createElement('script');
+    const t = setTimeout(() => { cleanup(); reject(new Error('Waktu habis')); }, 20000);
+    function cleanup() { clearTimeout(t); delete window[cb]; s.remove(); }
+    window[cb] = d => { cleanup(); resolve(d); };
+    s.onerror = () => { cleanup(); reject(new Error('Gagal memuat Apps Script (cek deploy: akses "Anyone")')); };
+    s.src = url + (url.includes('?') ? '&' : '?') + 'action=getData&callback=' + cb;
+    document.body.appendChild(s);
+  });
+}
+async function loadData() {
+  $('hTime').textContent = 'Memuat…';
+  try {
+    if (!API_URL) { ALL = DEMO; $('src').textContent = '● Data contoh'; }
+    else {
+      const res = await jsonp(API_URL);
+      if (res.error) throw new Error(res.error);
+      ALL = res.data || [];
+      $('src').textContent = '● Google Sheets';
+    }
+    $('hTime').textContent = 'Diperbarui: ' + new Date().toLocaleString('id-ID', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  } catch (e) { ALL = []; $('hTime').textContent = 'Gagal memuat: ' + e.message; }
+  fillSelect('fTingkat', 'Semua Tingkat', 'tingkat');
+  fillSelect('fTahun', 'Semua Tahun', 'tahun', true);
+  render();
+}
+function fillSelect(id, label, key, desc) {
+  const cur = $(id).value;
+  let vals = [...new Set(ALL.map(d => d[key]).filter(Boolean))].sort();
+  if (desc) vals.reverse();
+  $(id).innerHTML = `<option value="">${label}</option>` + vals.map(v => `<option>${esc(v)}</option>`).join('');
+  $(id).value = vals.includes(cur) ? cur : '';
+}
+
+// ---------- Filter & render ----------
+function filtered() {
+  const q = $('q').value.toLowerCase(), t = $('fTingkat').value, y = $('fTahun').value, j = $('fJuara').value;
+  let rows = ALL.filter(d =>
+    (!q || [d.nama, d.nisn, d.cabang, d.bidang].join(' ').toLowerCase().includes(q)) &&
+    (!t || d.tingkat === t) && (!y || d.tahun === y) &&
+    (!j || (j === 'lain' ? rank(d.juara) === 0 : rank(d.juara) === +j)));
+  if (sortK) rows = [...rows].sort((a, b) => String(a[sortK]).localeCompare(String(b[sortK]), 'id', { numeric: true }) * sortDir);
+  return rows;
+}
+function countBy(arr, fn) { const m = {}; arr.forEach(d => { const v = fn(d) || 'Tidak diisi'; m[v] = (m[v] || 0) + 1; }); return m; }
+
+function render() {
+  const rows = filtered(), n = rows.length;
+  const c = r => rows.filter(d => rank(d.juara) === r).length;
+  const siswa = new Set(rows.map(d => d.nisn || d.nama)).size;
+  $('hTotal').textContent = ALL.length + ' data';
+
+  const cards = [
+    ['TOTAL KEIKUTSERTAAN', n, 'Data terdaftar', '🏅', '#e0f0ee', '#0f5c5a'],
+    ['JUARA 1', c(1), n ? Math.round(c(1) / n * 100) + '% dari total' : '0% dari total', '🥇', '#fdf1d6', '#b9831a'],
+    ['JUARA 2', c(2), n ? Math.round(c(2) / n * 100) + '% dari total' : '0% dari total', '🥈', '#e8ecef', '#5b6b78'],
+    ['JUARA 3', c(3), n ? Math.round(c(3) / n * 100) + '% dari total' : '0% dari total', '🥉', '#fbe7dc', '#b4552b'],
+    ['SISWA BERPRESTASI', siswa, 'Siswa unik (NISN)', '🎓', '#e3ecf9', '#2b5aa8']
+  ];
+  $('stats').innerHTML = cards.map(k => `
+    <div class="card p-4 relative overflow-hidden">
+      <div class="corner" style="background:${k[4]}" aria-hidden="true">${k[3]}</div>
+      <p class="text-[10px] font-bold tracking-wider text-slate-500">${k[0]}</p>
+      <p class="font-serif text-3xl font-bold mt-2" style="color:${k[5]}">${k[1]}</p>
+      <p class="text-[11px] text-slate-400 mt-1">${k[2]}</p>
+    </div>`).join('');
+
+  $('cnt').textContent = n + ' data';
+  $('empty').classList.toggle('hidden', n > 0);
+  $('tbody').innerHTML = rows.map((d, i) => {
+    const f = driveIds(d.sertifikat);
+    return `<tr class="hover:bg-cream/80">
+      <td class="px-4 py-3 text-slate-400">${i + 1}</td>
+      <td class="px-4 py-3"><button class="name-btn font-bold text-teal-700 text-left" onclick="openModal(${d.id})">${esc(d.nama)}</button></td>
+      <td class="px-4 py-3 text-slate-500">${esc(d.nisn)}</td>
+      <td class="px-4 py-3">${pill(d.cabang, 'bg-teal-50 text-teal-800')}</td>
+      <td class="px-4 py-3">${esc(d.bidang)}</td>
+      <td class="px-4 py-3">${esc(d.tingkat)}</td>
+      <td class="px-4 py-3 font-bold">${esc(d.tahun)}</td>
+      <td class="px-4 py-3">${juaraPill(d)}</td>
+      <td class="px-4 py-3">${f.length ? `<a class="text-teal-700 font-semibold hover:underline" href="${esc(f[0].url)}" target="_blank" rel="noopener">Lihat</a>` : '<span class="text-slate-300">–</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  draw('cTingkat', 'doughnut', countBy(rows, d => d.tingkat));
+  draw('cCabang', 'bar', countBy(rows, d => d.cabang), true);
+  draw('cTahun', 'bar', countBy(rows, d => d.tahun));
+}
+
+const COLORS = ['#0f5c5a', '#e3a72f', '#d9604c', '#4a7fc1', '#8aa86b', '#7a55b3'];
+function draw(id, type, obj, horizontal) {
+  const labels = Object.keys(obj).sort(), data = labels.map(l => obj[l]);
+  if (charts[id]) charts[id].destroy();
+  const dn = type === 'doughnut';
+  charts[id] = new Chart($(id), {
+    type,
+    data: { labels, datasets: [{ data, backgroundColor: dn ? COLORS : (id === 'cCabang' ? '#e3a72f' : '#0f5c5a'), borderWidth: 0, borderRadius: dn ? 0 : 5, maxBarThickness: 48 }] },
+    options: {
+      indexAxis: horizontal ? 'y' : 'x',
+      responsive: true, maintainAspectRatio: false, cutout: dn ? '62%' : undefined,
+      plugins: { legend: { display: dn, position: 'bottom', labels: { boxWidth: 14, boxHeight: 8, font: { family: 'Outfit', size: 11 } } } },
+      scales: dn ? {} : horizontal
+        ? { x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e6efe9' } }, y: { grid: { display: false } } }
+        : { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#e6efe9' } }, x: { grid: { display: false } } }
+    }
+  });
+}
+
+// ---------- Popup ----------
+function openModal(id) {
+  const d = ALL.find(x => x.id === id); if (!d) return;
+  $('mAvatar').textContent = (d.nama || '?').trim().charAt(0).toUpperCase();
+  $('mNama').textContent = d.nama;
+  $('mSub').textContent = `NISN ${d.nisn || '-'} · ${d.cabang || ''} ${d.tahun || ''}`;
+  $('mBadges').innerHTML = juaraPill(d) + pill(d.tingkat, 'bg-teal-50 text-teal-800') + pill(d.cabang, 'bg-amber-50 text-amber-800');
+  const f = [
+    ['Nama siswa', d.nama], ['NISN', d.nisn], ['Cabang lomba', d.cabang], ['Bidang lomba', d.bidang],
+    ['Tingkat lomba', d.tingkat], ['Tahun keikutsertaan', d.tahun], ['Juara', d.juara], ['Diisi pada', d.timestamp]
+  ];
+  $('mBody').innerHTML = f.map(([k, v]) => `<div><dt class="text-[11px] text-slate-500">${k}</dt><dd class="font-semibold">${esc(v) || '–'}</dd></div>`).join('');
+
+  const fotos = driveIds(d.sertifikat);
+  $('mFoto').innerHTML = fotos.length
+    ? '<div class="grid grid-cols-1 gap-3">' + fotos.map(p => {
+        const src = p.id ? `https://drive.google.com/thumbnail?id=${p.id}&sz=w1200` : p.url;
+        return `<a href="${esc(p.url)}" target="_blank" rel="noopener" class="block rounded-xl overflow-hidden bg-cream">
+          <img src="${esc(src)}" alt="Sertifikat lomba ${esc(d.nama)}" class="w-full max-h-96 object-contain" loading="lazy" referrerpolicy="no-referrer"
+               onerror="this.outerHTML='<div class=&quot;h-40 flex items-center justify-center text-center text-xs text-slate-500 p-4&quot;>Sertifikat tidak bisa ditampilkan. Pastikan berbagi file Drive diatur ke “Siapa saja yang memiliki link”. Klik untuk membuka.</div>'"></a>`;
+      }).join('') + '</div>'
+    : '<p class="text-sm text-slate-400">Belum ada sertifikat yang diunggah.</p>';
+  $('modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() { $('modal').classList.add('hidden'); document.body.style.overflow = ''; }
+document.addEventListener('keydown', e => e.key === 'Escape' && closeModal());
+
+document.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
+  const k = th.dataset.k; sortDir = sortK === k ? -sortDir : 1; sortK = k; render();
+}));
+['q', 'fTingkat', 'fTahun', 'fJuara'].forEach(id => $(id).addEventListener('input', render));
+loadData();
+</script>
 </body>
 </html>
